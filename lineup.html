@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>先發守備陣容疊加畫面 (高階圖形版)</title>
+    <title>先發守備陣容疊加畫面 (自動縮放版)</title>
     <style>
-        /* 基礎透明背景，適用於直播軟體疊加 */
+        /* 基礎背景 */
         body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; }
         
-        /* 半透明深色背景遮罩，讓畫面更有質感 */
-        .overlay-container { width: 100vw; height: 100vh; background: radial-gradient(circle, rgba(16,20,81,0.6) 0%, rgba(0,0,0,0.85) 100%); position: relative; display: flex; flex-direction: column; align-items: center; }
+        /* ✅ 鎖定長寬比的虛擬畫布，所有元素都在這張 1280x720 的畫布上作畫 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: top left; }
+
+        /* 半透明深色背景遮罩 */
+        .overlay-container { width: 100%; height: 100%; background: radial-gradient(circle, rgba(16,20,81,0.6) 0%, rgba(0,0,0,0.85) 100%); position: relative; display: flex; flex-direction: column; align-items: center; }
         
         /* 頂部標題列 */
         .title-banner { margin-top: 40px; background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.8), transparent); width: 80%; text-align: center; padding: 15px 0; color: white; font-size: 42px; font-weight: bold; letter-spacing: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); opacity: 0; animation: fadeInDown 1s ease-out 0.2s forwards; z-index: 20; }
@@ -17,10 +20,10 @@
         /* 球場底圖容器 */
         .field-container { position: relative; width: 900px; height: 600px; margin-top: 20px; }
         
-        /* ✅ 讀取您上傳的專屬球場圖片 */
+        /* 讀取專屬球場圖片 */
         .field-bg { width: 100%; height: 100%; object-fit: contain; opacity: 0; filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.4)); animation: fadeIn 1.5s ease-out 0.5s forwards; }
 
-        /* ====== 守備位置座標 (精準對齊 3D 透視球場) ====== */
+        /* ====== 守備位置座標 ====== */
         .pos-wrapper { position: absolute; transform: translate(-50%, -50%); z-index: 10; }
         
         #wrap-C  { top: 88%; left: 50%; }
@@ -33,71 +36,44 @@
         #wrap-CF { top: 12%; left: 50%; }
         #wrap-RF { top: 22%; left: 78%; }
         
-        /* ✅ DH 指定打擊：放置在右下角，一壘包外側 */
+        /* DH 指定打擊：放置在右下角 */
         #wrap-DH { top: 85%; left: 88%; z-index: 15; }
 
-        /* ====== 球員圖塊與動畫設計 ====== */
+        /* ====== 球員圖塊 ====== */
         .player-card { display: flex; flex-direction: column; align-items: center; opacity: 0; transform: scale(0.5) translateY(30px); }
-        
-        /* 守位圓形徽章 */
         .pos-badge { background: linear-gradient(135deg, #101451, #009EDB); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; border: 2px solid #00FFFF; box-shadow: 0 0 15px rgba(0,255,255,0.6); margin-bottom: -5px; z-index: 2; text-shadow: 1px 1px 2px black; }
-        
-        /* ✅ 圓角平行四邊形 姓名板 */
-        .name-plate { 
-            background: rgba(0, 0, 0, 0.75); 
-            border: 2px solid #00FFFF; 
-            border-radius: 8px; /* 這裡控制圓角程度 */
-            transform: skew(-15deg); /* 傾斜產生平行四邊形 */
-            box-shadow: 0 5px 15px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,255,255,0.2); 
-            padding: 6px 18px; 
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* 反向傾斜，讓文字維持正的 */
-        .name-plate-inner { 
-            transform: skew(15deg); 
-            display: flex; 
-            align-items: baseline; 
-            gap: 10px; 
-        }
-        
+        .name-plate { background: rgba(0, 0, 0, 0.75); border: 2px solid #00FFFF; border-radius: 8px; transform: skew(-15deg); box-shadow: 0 5px 15px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,255,255,0.2); padding: 6px 18px; overflow: hidden; position: relative; }
+        .name-plate-inner { transform: skew(15deg); display: flex; align-items: baseline; gap: 10px; }
         .player-num { color: #FFFF00; font-size: 20px; font-weight: 900; font-style: italic; }
         .player-name { color: #FFFFFF; font-size: 24px; font-weight: bold; white-space: nowrap; text-shadow: 1px 1px 3px black; letter-spacing: 2px; }
 
-        /* ====== 動畫觸發定義 ====== */
-        /* 父層獲得 animate-pop 後，子層 player-card 才會執行動畫 */
         .pos-wrapper.animate-pop .player-card { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; animation-delay: var(--delay); }
 
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; filter: drop-shadow(0 0 0 rgba(0,255,255,0)); } to { opacity: 1; filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)); } }
-        @keyframes popIn { 
-            0% { opacity: 0; transform: scale(0.5) translateY(30px); } 
-            100% { opacity: 1; transform: scale(1) translateY(0); } 
-        }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
     </style>
 </head>
 <body>
 
-<div class="overlay-container">
-    <div class="title-banner" id="team-title">載入陣容中...</div>
-    
-    <div class="field-container">
-        <img src="field.png" class="field-bg" alt="Baseball Field">
+<div id="scale-wrapper">
+    <div class="overlay-container">
+        <div class="title-banner" id="team-title">載入陣容中...</div>
+        
+        <div class="field-container">
+            <img src="field.png" class="field-bg" alt="Baseball Field">
 
-        <div class="pos-wrapper" id="wrap-P"  style="--delay: 1.0s;"><div class="player-card"><div class="pos-badge">P</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-P"></span><span class="player-name" id="name-P">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-C"  style="--delay: 1.1s;"><div class="player-card"><div class="pos-badge">C</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-C"></span><span class="player-name" id="name-C">--</span></div></div></div></div>
-        
-        <div class="pos-wrapper" id="wrap-1B" style="--delay: 1.3s;"><div class="player-card"><div class="pos-badge">1B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-1B"></span><span class="player-name" id="name-1B">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-2B" style="--delay: 1.4s;"><div class="player-card"><div class="pos-badge">2B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-2B"></span><span class="player-name" id="name-2B">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-3B" style="--delay: 1.5s;"><div class="player-card"><div class="pos-badge">3B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-3B"></span><span class="player-name" id="name-3B">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-SS" style="--delay: 1.6s;"><div class="player-card"><div class="pos-badge">SS</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-SS"></span><span class="player-name" id="name-SS">--</span></div></div></div></div>
-        
-        <div class="pos-wrapper" id="wrap-LF" style="--delay: 1.8s;"><div class="player-card"><div class="pos-badge">LF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-LF"></span><span class="player-name" id="name-LF">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-CF" style="--delay: 1.9s;"><div class="player-card"><div class="pos-badge">CF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-CF"></span><span class="player-name" id="name-CF">--</span></div></div></div></div>
-        <div class="pos-wrapper" id="wrap-RF" style="--delay: 2.0s;"><div class="player-card"><div class="pos-badge">RF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-RF"></span><span class="player-name" id="name-RF">--</span></div></div></div></div>
-        
-        <div class="pos-wrapper" id="wrap-DH" style="--delay: 2.2s;"><div class="player-card"><div class="pos-badge" style="background: linear-gradient(135deg, #b33939, #ff5252);">DH</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-DH"></span><span class="player-name" id="name-DH">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-P"  style="--delay: 1.0s;"><div class="player-card"><div class="pos-badge">P</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-P"></span><span class="player-name" id="name-P">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-C"  style="--delay: 1.1s;"><div class="player-card"><div class="pos-badge">C</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-C"></span><span class="player-name" id="name-C">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-1B" style="--delay: 1.3s;"><div class="player-card"><div class="pos-badge">1B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-1B"></span><span class="player-name" id="name-1B">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-2B" style="--delay: 1.4s;"><div class="player-card"><div class="pos-badge">2B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-2B"></span><span class="player-name" id="name-2B">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-3B" style="--delay: 1.5s;"><div class="player-card"><div class="pos-badge">3B</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-3B"></span><span class="player-name" id="name-3B">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-SS" style="--delay: 1.6s;"><div class="player-card"><div class="pos-badge">SS</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-SS"></span><span class="player-name" id="name-SS">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-LF" style="--delay: 1.8s;"><div class="player-card"><div class="pos-badge">LF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-LF"></span><span class="player-name" id="name-LF">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-CF" style="--delay: 1.9s;"><div class="player-card"><div class="pos-badge">CF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-CF"></span><span class="player-name" id="name-CF">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-RF" style="--delay: 2.0s;"><div class="player-card"><div class="pos-badge">RF</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-RF"></span><span class="player-name" id="name-RF">--</span></div></div></div></div>
+            <div class="pos-wrapper" id="wrap-DH" style="--delay: 2.2s;"><div class="player-card"><div class="pos-badge" style="background: linear-gradient(135deg, #b33939, #ff5252);">DH</div><div class="name-plate"><div class="name-plate-inner"><span class="player-num" id="num-DH"></span><span class="player-name" id="name-DH">--</span></div></div></div></div>
+        </div>
     </div>
 </div>
 
@@ -120,10 +96,9 @@
   const db = getDatabase(app);
   const dbRef = ref(db);
 
-  // 解析網址參數 (例: lineup.html?gameId=xxx&team=away)
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
-  const targetTeam = urlParams.get('team'); // 'away' 或是 'home'
+  const targetTeam = urlParams.get('team');
   
   if (!gameId || !targetTeam) {
       document.getElementById('team-title').innerText = "錯誤：缺少賽事或隊伍參數";
@@ -134,40 +109,27 @@
   async function loadDefensiveLineup() {
       const basePath = `games/${gameId}`;
       const snapshot = await get(child(dbRef, basePath));
-      
       if (!snapshot.exists()) return;
       const data = snapshot.val();
       
-      // 1. 設定隊伍大標題
       const teamName = data.teams?.[targetTeam]?.name || "未命名隊伍";
       document.getElementById('team-title').innerText = `${teamName} - 先發守備陣容`;
 
-      // 2. 獲取名單與打線資料
       const rosterData = data.rosters?.[targetTeam] || {};
       const lineupData = data.lineups?.[targetTeam] || {};
-      
-      // 3. 建立守備位置對應表 (新增了 DH)
       const defPositions = { 'P': null, 'C': null, '1B': null, '2B': null, '3B': null, 'SS': null, 'LF': null, 'CF': null, 'RF': null, 'DH': null };
 
-      // 3a. 先抓取專屬投手 (如果有設定)
-      if (lineupData.pitcherIndex !== undefined && lineupData.pitcherIndex !== -1) {
-          defPositions['P'] = rosterData[lineupData.pitcherIndex];
-      }
+      if (lineupData.pitcherIndex !== undefined && lineupData.pitcherIndex !== -1) defPositions['P'] = rosterData[lineupData.pitcherIndex];
 
-      // 3b. 掃描 1~9 棒打線，將對應守位的人填入
       const batters = lineupData.batters || {};
       for (let i = 0; i < 9; i++) {
           let b = batters[i];
           if (b && b.rosterIndex !== -1 && b.pos) {
-              if (defPositions.hasOwnProperty(b.pos)) {
-                  defPositions[b.pos] = rosterData[b.rosterIndex];
-              }
+              if (defPositions.hasOwnProperty(b.pos)) defPositions[b.pos] = rosterData[b.rosterIndex];
           }
       }
 
-      // 4. 將資料填入網頁並觸發動畫
-      const positionKeys = Object.keys(defPositions);
-      positionKeys.forEach(pos => {
+      Object.keys(defPositions).forEach(pos => {
           const wrapperEl = document.getElementById(`wrap-${pos}`);
           const numEl = document.getElementById(`num-${pos}`);
           const nameEl = document.getElementById(`name-${pos}`);
@@ -175,14 +137,35 @@
           if (defPositions[pos]) {
               numEl.innerText = defPositions[pos].num || "";
               nameEl.innerText = defPositions[pos].name || "--";
-              // 加入動畫 Class，觸發 CSS 內的 keyframes
               wrapperEl.classList.add('animate-pop');
           } else {
-              // 若該守位沒人，則將整個外層隱藏
               wrapperEl.style.display = 'none';
           }
       });
   }
+
+  // ✅ 核心：1280x720 虛擬畫布的自動置中與縮放邏輯
+  function applyScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const targetW = 1280;
+      const targetH = 720;
+      
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      
+      // 取出縮放比例
+      const scale = Math.min(winW / targetW, winH / targetH);
+      wrapper.style.transform = `scale(${scale})`;
+      
+      // 確保即使框框比例和 16:9 不一樣，這張畫布也會自動置中在框框裡
+      const xOffset = (winW - targetW * scale) / 2;
+      const yOffset = (winH - targetH * scale) / 2;
+      wrapper.style.left = `${Math.max(0, xOffset)}px`;
+      wrapper.style.top = `${Math.max(0, yOffset)}px`;
+  }
+  
+  window.addEventListener('resize', applyScale);
+  applyScale();
 </script>
 </body>
 </html>
