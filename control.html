@@ -501,7 +501,6 @@
       bdg.innerText = "無"; bdg.style.backgroundColor = "#95a5a6"; disp.innerText = "請由上方選擇打者"; disp.style.color = "#888"; inH.value = 0; inAB.value = 0;
   }
 
-  // ✅ 測速槍微調邏輯
   window.changeRadarOffset = async (delta) => {
       const snap = await get(child(dbRef, `${basePath}/radarOffset`));
       const current = snap.exists() ? parseInt(snap.val()) : 0;
@@ -524,14 +523,50 @@
 
   window.setBatting = (team, idx) => update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(idx) } });
   window.saveManualStats = () => { if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請設定打者'); const { team, rosterIndex } = localState.currentBatter; update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: parseInt(document.getElementById('manual-h').value)||0, AB: parseInt(document.getElementById('manual-ab').value)||0 }); };
+  
+  // ✅ 核心優化：打擊結果送出後，自動尋找並觸發下一棒打者
   window.recordResult = async (type) => {
-      if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請設定打者');
-      const { team, rosterIndex } = localState.currentBatter; const snap = await get(child(dbRef, `${basePath}/rosters/${team}/${rosterIndex}`)); if (!snap.exists()) return;
+      if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請先設定目前的打者');
+      const { team, rosterIndex } = localState.currentBatter; 
+      const snap = await get(child(dbRef, `${basePath}/rosters/${team}/${rosterIndex}`)); 
+      if (!snap.exists()) return;
+      
       let p = snap.val(); let h = parseInt(p.H)||0; let ab = parseInt(p.AB)||0;
+      
+      // 更新安打與打數
       if (['1B','2B','3B','HR'].includes(type)) { h++; ab++; }
       if (['SO','GO','FO','N.O','GDP','FC','E'].includes(type)) ab++;
       await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
-      if (type !== 'SB') resetCount();
+      
+      // 除了盜壘(SB)之外，其餘結果皆會推進打線並清空好壞球
+      if (type !== 'SB') {
+          resetCount();
+          
+          // 自動推進下一棒邏輯
+          const batters = localState.lineups[team]?.batters || {};
+          let currentIndex = -1;
+          
+          // 找出目前打者在 1~9 棒中的位置
+          for (let i = 0; i < 9; i++) {
+              if (batters[i] && parseInt(batters[i].rosterIndex) === parseInt(rosterIndex)) {
+                  currentIndex = i;
+                  break;
+              }
+          }
+          
+          // 如果有找到，就往下找下一個有效的打者
+          if (currentIndex !== -1) {
+              let nextIndex = (currentIndex + 1) % 9;
+              for (let loop = 0; loop < 9; loop++) { // 最多找9次避免無限迴圈
+                  if (batters[nextIndex] && batters[nextIndex].rosterIndex !== undefined && batters[nextIndex].rosterIndex != -1) {
+                      // 找到下一棒，自動將他設定為打擊中！
+                      update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(batters[nextIndex].rosterIndex) } });
+                      break;
+                  }
+                  nextIndex = (nextIndex + 1) % 9;
+              }
+          }
+      }
   };
 
   function renderAllLineups() {
