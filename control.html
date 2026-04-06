@@ -110,16 +110,25 @@
         .btn-action { background: #3498db; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-action:hover { opacity: 0.9; }
         
+        /* ✅ 更新了頂部導覽列，加入先發陣容疊加網頁的連結 */
         .header-top-bar { background: #101451; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 10px; align-items: center; }
+        .nav-btn { color: white; text-decoration: none; border: 1px solid white; padding: 6px 12px; border-radius: 4px; font-size: 14px; transition: 0.2s; background: rgba(255,255,255,0.1); }
+        .nav-btn:hover { background: rgba(255,255,255,0.3); }
+        .nav-btn-highlight { border-color: #FFFF00; color: #FFFF00; background: rgba(255,255,0,0.1); }
+        .nav-btn-away { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
+        .nav-btn-home { border-color: #ff4081; color: #ff4081; background: rgba(255,64,129,0.1); }
     </style>
 </head>
 <body>
 
 <div class="header-top-bar" id="top-nav" style="display: none;">
     <div style="font-size: 18px; font-weight: bold;" id="nav-game-title">賽事控制台</div>
-    <div>
-        <a href="control.html" style="color: white; text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 14px;">回首頁大廳</a>
-        <a id="nav-overlay-link" href="#" target="_blank" style="color: #FFFF00; text-decoration: none; margin-left: 15px; font-size: 14px;">開啟疊加網頁 ↗</a>
+    <div class="nav-links">
+        <a href="control.html" class="nav-btn">首頁大廳</a>
+        <a id="nav-overlay-link" href="#" target="_blank" class="nav-btn nav-btn-highlight">BSO 記分板 ↗</a>
+        <a id="nav-lineup-away-link" href="#" target="_blank" class="nav-btn nav-btn-away">客隊守備圖 ↗</a>
+        <a id="nav-lineup-home-link" href="#" target="_blank" class="nav-btn nav-btn-home">主隊守備圖 ↗</a>
     </div>
 </div>
 
@@ -402,7 +411,12 @@
       document.getElementById('home-view').style.display = 'none';
       document.getElementById('controller-view').style.display = 'block';
       document.getElementById('top-nav').style.display = 'flex';
+      
+      // ✅ 更新上方導覽列的所有連結
       document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId || 'scoreboard'}`;
+      document.getElementById('nav-lineup-away-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=away`;
+      document.getElementById('nav-lineup-home-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=home`;
+      
       initController();
   } else {
       document.getElementById('home-view').style.display = 'block';
@@ -481,7 +495,6 @@
           }
           if(data.pitchCount) { document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0; document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0; }
           
-          // 更新測速微調顯示
           const offset = data.radarOffset || 0;
           document.getElementById('radar-offset-display').innerText = offset > 0 ? `+${offset}` : offset;
           document.getElementById('radar-offset-display').style.color = offset !== 0 ? '#e74c3c' : '#2c3e50';
@@ -524,7 +537,6 @@
   window.setBatting = (team, idx) => update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(idx) } });
   window.saveManualStats = () => { if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請設定打者'); const { team, rosterIndex } = localState.currentBatter; update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: parseInt(document.getElementById('manual-h').value)||0, AB: parseInt(document.getElementById('manual-ab').value)||0 }); };
   
-  // ✅ 核心優化：打擊結果送出後，自動尋找並觸發下一棒打者
   window.recordResult = async (type) => {
       if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請先設定目前的打者');
       const { team, rosterIndex } = localState.currentBatter; 
@@ -533,20 +545,16 @@
       
       let p = snap.val(); let h = parseInt(p.H)||0; let ab = parseInt(p.AB)||0;
       
-      // 更新安打與打數
       if (['1B','2B','3B','HR'].includes(type)) { h++; ab++; }
       if (['SO','GO','FO','N.O','GDP','FC','E'].includes(type)) ab++;
       await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
       
-      // 除了盜壘(SB)之外，其餘結果皆會推進打線並清空好壞球
       if (type !== 'SB') {
           resetCount();
           
-          // 自動推進下一棒邏輯
           const batters = localState.lineups[team]?.batters || {};
           let currentIndex = -1;
           
-          // 找出目前打者在 1~9 棒中的位置
           for (let i = 0; i < 9; i++) {
               if (batters[i] && parseInt(batters[i].rosterIndex) === parseInt(rosterIndex)) {
                   currentIndex = i;
@@ -554,12 +562,10 @@
               }
           }
           
-          // 如果有找到，就往下找下一個有效的打者
           if (currentIndex !== -1) {
               let nextIndex = (currentIndex + 1) % 9;
-              for (let loop = 0; loop < 9; loop++) { // 最多找9次避免無限迴圈
+              for (let loop = 0; loop < 9; loop++) {
                   if (batters[nextIndex] && batters[nextIndex].rosterIndex !== undefined && batters[nextIndex].rosterIndex != -1) {
-                      // 找到下一棒，自動將他設定為打擊中！
                       update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(batters[nextIndex].rosterIndex) } });
                       break;
                   }
