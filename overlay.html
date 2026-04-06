@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>轉播疊加畫面 (全新扁平風雙色球棒版)</title>
+    <title>轉播疊加畫面 (自動縮放版)</title>
     <style>
         /* 基礎透明背景與字型 */
-        body { margin: 0; padding: 20px; overflow: hidden; background-color: transparent; font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; font-weight: bold; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; font-weight: bold; }
+        
+        /* ✅ 加入自動縮放的外掛容器 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 15px; }
+
         .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
         .title-row { background-color: #101451; color: white; justify-content: center; font-size: 32px; height: 50px; display: flex; align-items: center; letter-spacing: 2px; }
         .main-grid { display: grid; grid-template-columns: 1fr 140px; grid-template-rows: 70px 70px; border-top: 2px solid white; border-bottom: 2px solid white; }
@@ -54,54 +58,52 @@
         .batter-stats-group { display: flex; align-items: center; gap: 15px; }
         .player-stats { font-size: 26px; font-weight: 900; color: #d35400; font-family: Arial, sans-serif; }
         
-        .bat-icon {
-            width: 36px; 
-            height: 36px; 
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); 
-        }
+        .bat-icon { width: 36px; height: 36px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
     </style>
 </head>
 <body>
 
-<div class="scoreboard">
-    <div class="title-row" id="game-title">等待賽事資料...</div>
-    <div class="main-grid">
-        <div class="team-row team-away"><div class="team-name" id="away-name">客隊</div><div class="team-score" id="away-score">0</div></div>
-        <div class="team-row team-home"><div class="team-name" id="home-name">主隊</div><div class="team-score" id="home-score">0</div></div>
-        <div class="inning-bases-area">
-            <div class="bases-container"><div class="base-diamond" id="base-2"></div><div class="base-diamond" id="base-3"></div><div class="base-diamond" id="base-1"></div></div>
-            <div class="inning-box"><span class="inning-arrow" id="inning-half">▲</span><span id="inning-num">1</span></div>
-        </div>
-    </div>
-    <div class="count-row">
-        <div class="count-group"><span class="count-label">B</span><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
-        <div class="separator"></div>
-        <div class="count-group"><span class="count-label">S</span><div class="dot" id="s1"></div><div class="dot" id="s2"></div></div>
-        <div class="separator"></div>
-        <div class="count-group"><span class="count-label">O</span><div class="dot" id="o1"></div><div class="dot" id="o2"></div></div>
-    </div>
-    <div class="pitcher-row-overlay" id="pitcher-container">
-        <div class="pitcher-info-overlay"><span class="pitcher-label-overlay">P</span><span class="pitcher-name-overlay" id="overlay-pitcher-name">--</span></div>
-        <div class="pitch-stats-group">
-            <div class="speed-overlay" id="radar-container"><span class="radar-speed" id="radar-speed">155</span><span class="radar-unit">km/h</span></div>
-            <div class="pitch-count-group">
-                <svg class="baseball-icon" viewBox="0 0 512 512"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM124.5 98.4c29.1 39.5 44.5 89.2 41 140.6-3.8 55.4-30.8 106.8-74 138.8-17-29.8-27.5-64.2-27.5-100.8 0-66.2 25.5-126.5 60.5-178.6zm263 0c35 52.1 60.5 112.4 60.5 178.6 0 36.6-10.5 71-27.5 100.8-43.2-32-70.2-83.4-74-138.8-3.5-51.4 11.9-101.1 41-140.6z"/></svg>
-                <span class="pitch-count-num-overlay" id="overlay-pitch-count">0</span>
+<div id="scale-wrapper">
+    <div class="scoreboard">
+        <div class="title-row" id="game-title">等待賽事資料...</div>
+        <div class="main-grid">
+            <div class="team-row team-away"><div class="team-name" id="away-name">客隊</div><div class="team-score" id="away-score">0</div></div>
+            <div class="team-row team-home"><div class="team-name" id="home-name">主隊</div><div class="team-score" id="home-score">0</div></div>
+            <div class="inning-bases-area">
+                <div class="bases-container"><div class="base-diamond" id="base-2"></div><div class="base-diamond" id="base-3"></div><div class="base-diamond" id="base-1"></div></div>
+                <div class="inning-box"><span class="inning-arrow" id="inning-half">▲</span><span id="inning-num">1</span></div>
             </div>
         </div>
-    </div>
-    
-    <div class="player-row" id="player-container" style="display: none;">
-        <div class="player-info"><div class="player-number" id="player-number">--</div><div class="player-name" id="player-name">--</div></div>
-        <div class="batter-stats-group">
-            <div class="player-stats" id="player-stats">0 / 0</div>
-            <svg class="bat-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <g transform="translate(50, 50) rotate(-45) translate(-50, -50)">
-                    <rect x="14" y="42" width="6" height="16" rx="3" fill="#5C4033" stroke="#2C1810" stroke-width="3" />
-                    <rect x="19" y="45" width="26" height="10" fill="#5C4033" stroke="#2C1810" stroke-width="3" />
-                    <path d="M 45 45 L 75 38 C 88 38 90 41 90 50 C 90 59 88 62 75 62 L 45 55 Z" fill="#D4A373" stroke="#2C1810" stroke-width="3" stroke-linejoin="round" />
-                </g>
-            </svg>
+        <div class="count-row">
+            <div class="count-group"><span class="count-label">B</span><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
+            <div class="separator"></div>
+            <div class="count-group"><span class="count-label">S</span><div class="dot" id="s1"></div><div class="dot" id="s2"></div></div>
+            <div class="separator"></div>
+            <div class="count-group"><span class="count-label">O</span><div class="dot" id="o1"></div><div class="dot" id="o2"></div></div>
+        </div>
+        <div class="pitcher-row-overlay" id="pitcher-container">
+            <div class="pitcher-info-overlay"><span class="pitcher-label-overlay">P</span><span class="pitcher-name-overlay" id="overlay-pitcher-name">--</span></div>
+            <div class="pitch-stats-group">
+                <div class="speed-overlay" id="radar-container"><span class="radar-speed" id="radar-speed">155</span><span class="radar-unit">km/h</span></div>
+                <div class="pitch-count-group">
+                    <svg class="baseball-icon" viewBox="0 0 512 512"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM124.5 98.4c29.1 39.5 44.5 89.2 41 140.6-3.8 55.4-30.8 106.8-74 138.8-17-29.8-27.5-64.2-27.5-100.8 0-66.2 25.5-126.5 60.5-178.6zm263 0c35 52.1 60.5 112.4 60.5 178.6 0 36.6-10.5 71-27.5 100.8-43.2-32-70.2-83.4-74-138.8-3.5-51.4 11.9-101.1 41-140.6z"/></svg>
+                    <span class="pitch-count-num-overlay" id="overlay-pitch-count">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="player-row" id="player-container" style="display: none;">
+            <div class="player-info"><div class="player-number" id="player-number">--</div><div class="player-name" id="player-name">--</div></div>
+            <div class="batter-stats-group">
+                <div class="player-stats" id="player-stats">0 / 0</div>
+                <svg class="bat-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(50, 50) rotate(-45) translate(-50, -50)">
+                        <rect x="14" y="42" width="6" height="16" rx="3" fill="#5C4033" stroke="#2C1810" stroke-width="3" />
+                        <rect x="19" y="45" width="26" height="10" fill="#5C4033" stroke="#2C1810" stroke-width="3" />
+                        <path d="M 45 45 L 75 38 C 88 38 90 41 90 50 C 90 59 88 62 75 62 L 45 55 Z" fill="#D4A373" stroke="#2C1810" stroke-width="3" stroke-linejoin="round" />
+                    </g>
+                </svg>
+            </div>
         </div>
     </div>
 </div>
@@ -167,28 +169,18 @@
           if (pIdx !== undefined && pIdx !== -1) pName = data.rosters[pitchingTeam]?.[pIdx]?.name || "(未命名)";
       }
       document.getElementById('overlay-pitcher-name').innerText = pName;
+      if (data.pitchCount) document.getElementById('overlay-pitch-count').innerText = data.pitchCount[pitchingTeam] || 0;
 
-      if (data.pitchCount) {
-          document.getElementById('overlay-pitch-count').innerText = data.pitchCount[pitchingTeam] || 0;
-      }
-
-      // ✅ 全新加入的「讀取測速誤差值」邏輯
       const offset = data.radarOffset ? parseInt(data.radarOffset) : 0;
-
       if (data.radar && data.radar.speed && data.radar.speed !== "") {
           if (data.radar.speed !== currentShowingSpeed) {
               currentShowingSpeed = data.radar.speed;
-              
-              // 運算最終要顯示的微調球速
               let rawSpeed = parseInt(data.radar.speed);
-              let finalSpeedText = data.radar.speed; // 預設值防呆
-              if (!isNaN(rawSpeed)) {
-                  finalSpeedText = (rawSpeed + offset).toString();
-              }
+              let finalSpeedText = data.radar.speed; 
+              if (!isNaN(rawSpeed)) finalSpeedText = (rawSpeed + offset).toString();
               
-              const radarEl = document.getElementById('radar-container');
               document.getElementById('radar-speed').innerText = finalSpeedText;
-              radarEl.style.display = 'flex'; 
+              document.getElementById('radar-container').style.display = 'flex'; 
               
               if(window.speedTimeout) clearTimeout(window.speedTimeout);
               window.speedTimeout = setTimeout(() => {
@@ -208,16 +200,33 @@
               document.getElementById('player-container').style.display = 'flex';
               document.getElementById('player-number').innerText = player.num || '';
               document.getElementById('player-name').innerText = player.name || '';
-              const h = player.H || 0;
-              const ab = player.AB || 0;
-              document.getElementById('player-stats').innerText = `${h} / ${ab}`;
-          } else {
-              document.getElementById('player-container').style.display = 'none';
-          }
-      } else {
-          document.getElementById('player-container').style.display = 'none';
-      }
+              document.getElementById('player-stats').innerText = `${player.H || 0} / ${player.AB || 0}`;
+          } else { document.getElementById('player-container').style.display = 'none'; }
+      } else { document.getElementById('player-container').style.display = 'none'; }
   });
+
+  // ✅ 核心：自動測量視窗大小並等比例縮放記分板
+  function applyScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const board = document.querySelector('.scoreboard');
+      
+      // 記分板設計寬度為 460，高度依內容約在 250~350 之間
+      const targetW = 460;
+      const targetH = board.offsetHeight || 300; 
+      
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      
+      // 取寬度與高度中「縮放比例較小」的那個，確保完全塞進框內
+      const scale = Math.min(winW / targetW, winH / targetH);
+      
+      wrapper.style.transform = `scale(${scale})`;
+  }
+  
+  // 視窗大小改變時自動縮放
+  window.addEventListener('resize', applyScale);
+  // 定時檢查 (防止打者資料出現導致高度改變時被切掉)
+  setInterval(applyScale, 500);
 </script>
 </body>
 </html>
