@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>轉播疊加畫面 (自動縮放版)</title>
+    <title>轉播疊加畫面 (自動縮放與完美邊界版)</title>
     <style>
         /* 基礎透明背景與字型 */
         body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; font-weight: bold; }
         
-        /* ✅ 加入自動縮放的外掛容器 */
-        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 15px; }
+        /* ✅ 加入自動縮放的外掛容器，並設定 20px 的四面邊界(padding)來容納陰影 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; }
 
         .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
         .title-row { background-color: #101451; color: white; justify-content: center; font-size: 32px; height: 50px; display: flex; align-items: center; letter-spacing: 2px; }
@@ -205,19 +205,21 @@
       } else { document.getElementById('player-container').style.display = 'none'; }
   });
 
-  // ✅ 核心：自動測量視窗大小並等比例縮放記分板
+  // ✅ 核心：自動測量視窗大小並等比例縮放記分板 (含邊距計算)
   function applyScale() {
       const wrapper = document.getElementById('scale-wrapper');
       const board = document.querySelector('.scoreboard');
       
-      // 記分板設計寬度為 460，高度依內容約在 250~350 之間
-      const targetW = 460;
-      const targetH = board.offsetHeight || 300; 
+      // 記分板設計寬度為 460，外層 padding 為 20px (左右共 40px，上下共 40px)
+      const paddingOffset = 40; 
+      
+      const targetW = 460 + paddingOffset;
+      const targetH = (board.offsetHeight || 300) + paddingOffset; 
       
       const winW = window.innerWidth;
       const winH = window.innerHeight;
       
-      // 取寬度與高度中「縮放比例較小」的那個，確保完全塞進框內
+      // 取寬度與高度中「縮放比例較小」的那個，確保連同陰影邊界完全塞進框內
       const scale = Math.min(winW / targetW, winH / targetH);
       
       wrapper.style.transform = `scale(${scale})`;
