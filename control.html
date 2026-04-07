@@ -126,9 +126,13 @@
     <div style="font-size: 18px; font-weight: bold;" id="nav-game-title">賽事控制台</div>
     <div class="nav-links">
         <a href="control.html" class="nav-btn">首頁大廳</a>
-        <a id="nav-overlay-link" href="#" target="_blank" class="nav-btn nav-btn-highlight">BSO 記分板 ↗</a>
-        <a id="nav-lineup-away-link" href="#" target="_blank" class="nav-btn nav-btn-away">客隊守備圖 ↗</a>
-        <a id="nav-lineup-home-link" href="#" target="_blank" class="nav-btn nav-btn-home">主隊守備圖 ↗</a>
+        <a id="nav-overlay-link" href="#" target="_blank" class="nav-btn nav-btn-highlight">BSO 記分板</a>
+        <span style="color: rgba(255,255,255,0.3);">|</span>
+        <a id="nav-lineup-away-link" href="#" target="_blank" class="nav-btn nav-btn-away">客 守備圖</a>
+        <a id="nav-order-away-link" href="#" target="_blank" class="nav-btn nav-btn-away">客 打序表</a>
+        <span style="color: rgba(255,255,255,0.3);">|</span>
+        <a id="nav-lineup-home-link" href="#" target="_blank" class="nav-btn nav-btn-home">主 守備圖</a>
+        <a id="nav-order-home-link" href="#" target="_blank" class="nav-btn nav-btn-home">主 打序表</a>
     </div>
 </div>
 
@@ -416,6 +420,9 @@
       document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId || 'scoreboard'}`;
       document.getElementById('nav-lineup-away-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=away`;
       document.getElementById('nav-lineup-home-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=home`;
+      // ✅ 新增的打序表連結
+      document.getElementById('nav-order-away-link').href = `batting_order.html?gameId=${gameId || 'scoreboard'}&team=away`;
+      document.getElementById('nav-order-home-link').href = `batting_order.html?gameId=${gameId || 'scoreboard'}&team=home`;
       
       initController();
   } else {
