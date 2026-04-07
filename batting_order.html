@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>先發打序表 (蒸氣龐克完美對齊版)</title>
+    <style>
+        /* 基礎透明背景，適用於直播軟體疊加 */
+        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Georgia", "Microsoft JhengHei", serif; }
+        
+        /* 自動縮放的外掛容器 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: top left; }
+
+        /* 全透明背景，讓直播畫面完全透出 */
+        .overlay-container { width: 100%; height: 100%; background: transparent; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* 蒸氣龐克大外框容器 */
+        .board-container { position: relative; width: 450px; height: 680px; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8)); }
+        
+        /* 讀取專屬背景圖 */
+        .board-bg { width: 100%; height: 100%; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* ====== 1. 隊伍名稱圖塊：改為長方形厚重金屬材質 ====== */
+        .team-title-box {
+            position: absolute;
+            top: -12.5%;   
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+            display: flex;
+            justify-content: center;
+        }
+
+        .team-title-plate {
+            background: linear-gradient(to bottom, #5c4d3c 0%, #3a2e21 100%);
+            border: 4px solid #8b6e4a; /* ✅ 加粗邊框：增加金屬重量感 */
+            border-radius: 6px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.9), 0 6px 8px rgba(0,0,0,0.6);
+            /* 🚫 移除了 transform: skew，回歸長方形 */
+            width: 80%;
+            padding: 12px 0;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 隊伍金屬牌的反光特效 */
+        .team-title-plate::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 35%; background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events: none; }
+
+        .team-title-inner {
+            /* 🚫 移除了內部反傾斜 */
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .team-title-text {
+            color: #f1c40f;
+            font-size: 42px; 
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-shadow: 2px 2px 4px #000, 0 0 10px rgba(241,196,15,0.5);
+        }
+
+        /* ====== 打序列表容器 ====== */
+        .list-container { 
+            position: absolute; 
+            top: 17.3%;     
+            left: 24.5%;    
+            width: 62.5%;   
+            height: 68.3%;  
+            z-index: 10; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            perspective: 1000px; 
+        }
+
+        /* 蒸氣龐克 3D 翻轉金屬牌 */
+        .flap-row { 
+            width: 100%; 
+            height: 8.2%;   
+            position: relative;
+            transform-style: preserve-3d; 
+            transform-origin: top; 
+            transform: rotateX(-90deg); 
+            opacity: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .flap-row.flip-down { animation: mechanicalFlip 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* ====== 4. 重新排版金屬牌內部：統一靠左推移，確保垂直對齊 ====== */
+        .metal-plate {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #5c4d3c 0%, #3a2e21 100%);
+            border: 2px solid #8b6e4a;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 5px 5px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* 改為靠左對齊 */
+            padding-left: 35px; /* ✅ 將整組文字固定往右推，避免右側太空，又能保證垂直絕對對齊 */
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metal-plate::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 30%; background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events: none; }
+
+        /* ====== 2. 守位徽章：加大字體，縮小與背號的間距 ====== */
+        .pos-badge { 
+            background: radial-gradient(circle, #b89947, #755a20); 
+            color: #1a1105; 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 18px; /* ✅ 字體從 14px 放大至 18px */
+            font-weight: 900; 
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.8), inset -1px -1px 3px rgba(0,0,0,0.4); 
+            border: 1px solid #d4b56a; 
+            margin-right: 12px; /* ✅ 縮小徽章與背號的固定間距 */
+        }
+
+        /* ====== 3. 獨立且固定寬度的背號與姓名區塊 ====== */
+        .num-name-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .player-num { 
+            color: #FFFF00; 
+            font-size: 22px; 
+            font-weight: 900; 
+            font-style: italic; 
+            width: 35px; /* ✅ 給予絕對寬度，讓所有棒次的數字都能在同一垂直線上對齊 */
+            text-align: center; 
+        }
+
+        .player-name {
+            color: #ffeaa7;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000, 0 0 8px rgba(241, 196, 15, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            letter-spacing: 2px;
+            margin-left: 15px; /* ✅ 姓名與背號之間的固定間距，確保姓名的第一個字絕對切齊 */
+            text-align: left;
+        }
+
+        /* ====== 動畫定義 ====== */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes mechanicalFlip {
+            0% { transform: rotateX(-90deg); opacity: 0; }
+            40% { opacity: 1; }
+            70% { transform: rotateX(15deg); opacity: 1; }
+            90% { transform: rotateX(-5deg); opacity: 1; }
+            100% { transform: rotateX(0deg); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="scale-wrapper">
+    <div class="overlay-container">
+        
+        <div class="board-container">
+            <img src="board.png" class="board-bg" alt="Steampunk Board">
+            
+            <div class="team-title-box">
+                <div class="team-title-plate">
+                    <div class="team-title-inner">
+                        <span class="team-title-text" id="team-title">載入打序中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-container" id="lineup-list">
+                </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  // TODO: 貼上您的 Firebase Config
+  const firebaseConfig = {
+  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
+  authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
+  databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "baseball-scoreboard-294d8",
+  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
+  messagingSenderId: "179359096477",
+  appId: "1:179359096477:web:8188f897371651442e7e74"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get('gameId');
+  const targetTeam = urlParams.get('team'); // 'away' 或 'home'
+  
+  if (!gameId || !targetTeam) {
+      document.getElementById('team-title').innerText = "錯誤：參數遺失";
+  } else {
+      loadBattingOrder();
+  }
+
+  async function loadBattingOrder() {
+      const basePath = `games/${gameId}`;
+      const snapshot = await get(child(dbRef, basePath));
+      
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
+      
+      const teamName = data.teams?.[targetTeam]?.name || "未命名隊伍";
+      document.getElementById('team-title').innerText = teamName;
+
+      const rosterData = data.rosters?.[targetTeam] || {};
+      const lineupData = data.lineups?.[targetTeam] || {};
+      const batters = lineupData.batters || {};
+
+      const listContainer = document.getElementById('lineup-list');
+      listContainer.innerHTML = ''; 
+
+      for (let i = 0; i < 9; i++) {
+          let b = batters[i];
+          let pos = "--";
+          let playerNum = "--"; 
+          let playerName = "-----------------";
+          
+          if (b && b.rosterIndex !== undefined && b.rosterIndex !== -1) {
+              const player = rosterData[b.rosterIndex];
+              pos = b.pos || "--";
+              if (player) {
+                  playerNum = player.num || "--";
+                  playerName = player.name || "Unknown";
+              }
+          }
+
+          const rowDiv = document.createElement('div');
+          rowDiv.className = 'flap-row';
+          rowDiv.innerHTML = `
+              <div class="metal-plate">
+                  <div class="pos-badge">${pos}</div>
+                  <div class="num-name-group">
+                      <div class="player-num">${playerNum}</div>
+                      <div class="player-name">${playerName}</div>
+                  </div>
+              </div>
+          `;
+          listContainer.appendChild(rowDiv);
+      }
+
+      const rows = document.querySelectorAll('.flap-row');
+      rows.forEach((row, index) => {
+          setTimeout(() => {
+              row.classList.add('flip-down');
+          }, 800 + (index * 150)); 
+      });
+  }
+
+  function applyScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const paddingOffset = 160; 
+      const targetW = 1280 + paddingOffset;
+      const targetH = 720 + paddingOffset;
+      
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      
+      const scale = Math.min(winW / targetW, winH / targetH);
+      wrapper.style.transform = `scale(${scale})`;
+      
+      const xOffset = (winW - 1280 * scale) / 2;
+      const yOffset = (winH - 720 * scale) / 2;
+      wrapper.style.left = `${Math.max(0, xOffset)}px`;
+      wrapper.style.top = `${Math.max(0, yOffset)}px`;
+  }
+  
+  window.addEventListener('resize', applyScale);
+  applyScale();
+  setInterval(applyScale, 500);
+</script>
+</body>
+</html>
