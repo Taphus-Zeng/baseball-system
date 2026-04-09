@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>純球速疊加畫面 (TAG One Radar版)</title>
+    <style>
+        /* 基礎透明背景，強制向量抗鋸齒渲染 */
+        body { 
+            margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
+            font-family: "Impact", "Microsoft JhengHei", sans-serif; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        /* 縮放容器與防裁切邊界 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; padding: 20px; transform-origin: top left; }
+
+        /* 球速顯示框 (預設透明度為 0 隱藏) */
+        .speed-box {
+            background: rgba(10, 15, 30, 0.85); /* 科技感深色半透明底 */
+            border: 3px solid #00FFFF;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 255, 255, 0.3);
+            padding: 10px 35px;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            opacity: 0; /* 初始隱藏 */
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 帶有微彈跳的出現動畫 */
+        }
+
+        /* 當收到球速資料時，加上 active class 顯示出來 */
+        .speed-box.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .speed-val {
+            color: #FFFF00;
+            font-size: 90px; /* 超大數字 */
+            font-weight: 900;
+            font-style: italic;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(255, 255, 0, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .speed-unit {
+            color: #FFFFFF;
+            font-size: 28px;
+            font-weight: bold;
+            font-style: italic;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+
+<div id="scale-wrapper">
+    <div class="speed-box" id="speed-container">
+        <span class="speed-val" id="speed-text">--</span>
+        <span class="speed-unit">km/h</span>
+    </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // TODO: 貼上您的 Firebase Config
+  const firebaseConfig = {
+  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
+  authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
+  databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "baseball-scoreboard-294d8",
+  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
+  messagingSenderId: "179359096477",
+  appId: "1:179359096477:web:8188f897371651442e7e74"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // 判斷 Firebase 讀取路徑
+  // 如果您的 Automate 是直接寫入到 "scoreboard/radar"，則使用預設
+  // 您也可以透過網址傳遞，例如：speed_only.html?gameId=game_123
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get('gameId');
+  const basePath = gameId ? `games/${gameId}/radar` : 'scoreboard/radar';
+
+  let hideTimeout;
+  let currentSpeed = "";
+
+  // 監聽 Firebase 上的球速節點
+  onValue(ref(db, basePath), (snapshot) => {
+      const radarData = snapshot.val();
+      if (!radarData) return;
+
+      const speedBox = document.getElementById('speed-container');
+      const speedText = document.getElementById('speed-text');
+      
+      // 若您的資料庫有雷達偏移值設定，一併計算
+      const offset = radarData.offset ? parseInt(radarData.offset) : 0;
+
+      if (radarData.speed && radarData.speed !== "") {
+          // 檢查是否為新的球速資料
+          if (radarData.speed !== currentSpeed) {
+              currentSpeed = radarData.speed;
+              
+              let rawSpeed = parseInt(radarData.speed);
+              let finalSpeedText = radarData.speed; 
+              if (!isNaN(rawSpeed)) {
+                  finalSpeedText = (rawSpeed + offset).toString();
+              }
+              
+              // 更新數字並顯示動畫
+              speedText.innerText = finalSpeedText;
+              speedBox.classList.add('active');
+              
+              // 重新設定隱藏計時器 (維持顯示 3 秒後自動消失)
+              if (hideTimeout) clearTimeout(hideTimeout);
+              
+              hideTimeout = setTimeout(() => {
+                  speedBox.classList.remove('active');
+                  currentSpeed = ""; 
+                  // 選擇性：清空資料庫的 speed 值，以便下次相同球速也能觸發
+                  update(ref(db, basePath), { speed: "" });
+              }, 3000);
+          }
+      }
+  });
+
+  // 超清向量縮放邏輯
+  function applyScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const box = document.getElementById('speed-container');
+      
+      const targetW = 300; 
+      const targetH = 150; 
+      
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      
+      const scale = Math.min(winW / targetW, winH / targetH);
+      wrapper.style.zoom = scale;
+  }
+  
+  window.addEventListener('resize', applyScale);
+  applyScale();
+  setInterval(applyScale, 500);
+</script>
+</body>
+</html>
