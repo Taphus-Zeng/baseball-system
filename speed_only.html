@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>純球速疊加畫面 (極簡無底框+自訂縮放版)</title>
+    <title>純球速疊加畫面 (右下錨定與細緻邊框版)</title>
     <style>
         /* 基礎透明背景，強制向量抗鋸齒渲染 */
         body { 
@@ -14,17 +14,18 @@
             text-rendering: optimizeLegibility;
         }
         
+        /* ✅ 修改 1：定位改為右下角錨定，基準點設為 bottom right */
         #scale-wrapper { 
             position: absolute; 
-            top: 0; 
-            left: 0; 
+            bottom: 0;  /* 錨定底部 */
+            right: 0;   /* 錨定右側 */
             padding: 20px; 
             width: 450px;    
             height: 250px;   
             display: flex;
-            align-items: center;
-            justify-content: center;
-            transform-origin: top left; 
+            align-items: flex-end;    /* 內容靠下 */
+            justify-content: flex-end; /* 內容靠右 */
+            transform-origin: bottom right; /* ✅ 縮放基準點改為右下角 */
         }
 
         .speed-box {
@@ -54,9 +55,10 @@
             transition: color 0.2s, -webkit-text-stroke 0.2s; 
         }
 
+        /* ✅ 修改 2：黃色邊框細化為 0.5px */
         .speed-val.fire {
             color: #FF1111; 
-            -webkit-text-stroke: 0.5px #FFFF00; 
+            -webkit-text-stroke: 0.5px #FFFF00; /* 提升精緻度 */
             text-shadow: 0 0 35px rgba(255, 0, 0, 0.8), 8px 8px 15px rgba(0,0,0,0.8); 
         }
     </style>
@@ -91,22 +93,20 @@
   const gameId = urlParams.get('gameId');
   const basePath = gameId ? `games/${gameId}/radar` : 'scoreboard/radar';
 
-  // ✅ 新增：讀取網址列的 scale 參數，預設為 1.0 (100%)
-  let customScale = 0.3;
+  let customScale = 1.0;
   if (urlParams.has('scale')) {
       const parsedScale = parseFloat(urlParams.get('scale'));
-      if (!isNaN(parsedScale) && parsedScale > 0) {
-          customScale = parsedScale;
-      }
+      if (!isNaN(parsedScale) && parsedScale > 0) customScale = parsedScale;
   }
 
   let currentSpeed = "";
 
+  // ✅ 修改 3：預設顯示時間延長至 60000 毫秒 (60 秒)
   let hideTimeout = setTimeout(() => {
       document.getElementById('speed-container').classList.remove('active');
       document.getElementById('speed-text').innerText = "--";
       document.getElementById('speed-text').classList.remove('fire');
-  }, 20000);
+  }, 60000);
 
   onValue(ref(db, basePath), (snapshot) => {
       const radarData = snapshot.val();
@@ -114,13 +114,11 @@
 
       const speedBox = document.getElementById('speed-container');
       const speedText = document.getElementById('speed-text');
-      
       const offset = radarData.offset ? parseInt(radarData.offset) : 0;
 
       if (radarData.speed && radarData.speed !== "") {
           if (radarData.speed !== currentSpeed) {
               currentSpeed = radarData.speed;
-              
               let rawSpeed = parseInt(radarData.speed);
               let finalSpeedText = radarData.speed; 
               let finalSpeedNum = 0;
@@ -131,17 +129,11 @@
               }
               
               speedText.innerText = finalSpeedText;
-              
-              if (finalSpeedNum > 150) {
-                  speedText.classList.add('fire');
-              } else {
-                  speedText.classList.remove('fire');
-              }
+              if (finalSpeedNum > 150) speedText.classList.add('fire');
+              else speedText.classList.remove('fire');
               
               speedBox.classList.add('active');
-              
               if (hideTimeout) clearTimeout(hideTimeout);
-              
               hideTimeout = setTimeout(() => {
                   speedBox.classList.remove('active');
                   currentSpeed = ""; 
@@ -153,32 +145,26 @@
 
   function applyScale() {
       const wrapper = document.getElementById('scale-wrapper');
-      
       const designW = 450; 
       const designH = 250; 
       const paddingOffset = 40; 
       
       const targetW = designW + paddingOffset;
       const targetH = designH + paddingOffset; 
-      
       const winW = window.innerWidth;
       const winH = window.innerHeight;
       
-      // 計算原本的基礎滿版縮放比例
       const baseScale = Math.min(winW / targetW, winH / targetH);
-      
-      // ✅ 核心魔法：將基礎比例乘上您的自訂倍率
       const finalScale = baseScale * customScale;
       
       wrapper.style.transform = 'none';
       wrapper.style.zoom = finalScale;
       
-      // 搭配新的縮放比例進行完美置中
-      const xOffset = (winW - targetW * finalScale) / 2;
-      const yOffset = (winH - targetH * finalScale) / 2;
-      
-      wrapper.style.left = `${Math.max(0, xOffset)}px`;
-      wrapper.style.top = `${Math.max(0, yOffset)}px`;
+      // ✅ 因為基準點在右下角，我們將 wrapper 固定在視窗右下
+      wrapper.style.top = 'auto';
+      wrapper.style.left = 'auto';
+      wrapper.style.bottom = '0px';
+      wrapper.style.right = '0px';
   }
   
   window.addEventListener('resize', applyScale);
