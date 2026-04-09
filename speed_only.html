@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>純球速疊加畫面 (極簡無底框巨大化版)</title>
+    <title>純球速疊加畫面 (極簡無底框+自訂縮放版)</title>
     <style>
         /* 基礎透明背景，強制向量抗鋸齒渲染 */
         body { 
@@ -14,7 +14,6 @@
             text-rendering: optimizeLegibility;
         }
         
-        /* 縮放容器與防裁切邊界 */
         #scale-wrapper { 
             position: absolute; 
             top: 0; 
@@ -28,10 +27,8 @@
             transform-origin: top left; 
         }
 
-        /* 球速顯示框 */
         .speed-box {
-            background: transparent; /* ✅ 修改 1：將背景設定為全透明，移除深色畫布 */
-            /* 🚫 移除了 box-shadow，讓框框的實體陰影消失 */
+            background: transparent; 
             padding: 15px 40px; 
             display: flex;
             align-items: center;
@@ -46,22 +43,20 @@
             transform: translateY(0);
         }
 
-        /* 預設球速字體 (150含以下) - 保留了文字的陰影確保辨識度 */
         .speed-val {
             color: #FFFF00;
-            font-size: 250px; 
+            font-size: 190px; 
             font-weight: bold; 
             font-style: italic;
             line-height: 1; 
-            text-shadow: 4px 4px 8px rgba(0,0,0,0.8); /* 數字本身的陰影保留，確保疊加在淺色背景依然清晰 */
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.8); 
             letter-spacing: 2px;
             transition: color 0.2s, -webkit-text-stroke 0.2s; 
         }
 
-        /* 火球特效 (大於 150 km/h 時套用) */
         .speed-val.fire {
             color: #FF1111; 
-            -webkit-text-stroke: 0.2px #FFFF00; 
+            -webkit-text-stroke: 4px #FFFF00; 
             text-shadow: 0 0 35px rgba(255, 0, 0, 0.8), 8px 8px 15px rgba(0,0,0,0.8); 
         }
     </style>
@@ -96,16 +91,23 @@
   const gameId = urlParams.get('gameId');
   const basePath = gameId ? `games/${gameId}/radar` : 'scoreboard/radar';
 
+  // ✅ 新增：讀取網址列的 scale 參數，預設為 1.0 (100%)
+  let customScale = 0.3;
+  if (urlParams.has('scale')) {
+      const parsedScale = parseFloat(urlParams.get('scale'));
+      if (!isNaN(parsedScale) && parsedScale > 0) {
+          customScale = parsedScale;
+      }
+  }
+
   let currentSpeed = "";
 
-  // 載入預覽機制：給導播 8 秒鐘的時間調整位置，時間到自動隱藏防呆
   let hideTimeout = setTimeout(() => {
       document.getElementById('speed-container').classList.remove('active');
       document.getElementById('speed-text').innerText = "--";
       document.getElementById('speed-text').classList.remove('fire');
-  }, 20000);
+  }, 8000);
 
-  // 監聽 Firebase 上的球速節點
   onValue(ref(db, basePath), (snapshot) => {
       const radarData = snapshot.val();
       if (!radarData) return;
@@ -128,17 +130,14 @@
                   finalSpeedText = finalSpeedNum.toString();
               }
               
-              // 更新數字
               speedText.innerText = finalSpeedText;
               
-              // 判斷球速是否大於 150，動態加入火球特效 Class
               if (finalSpeedNum > 150) {
                   speedText.classList.add('fire');
               } else {
                   speedText.classList.remove('fire');
               }
               
-              // 顯示動畫
               speedBox.classList.add('active');
               
               if (hideTimeout) clearTimeout(hideTimeout);
@@ -165,13 +164,18 @@
       const winW = window.innerWidth;
       const winH = window.innerHeight;
       
-      const scale = Math.min(winW / targetW, winH / targetH);
+      // 計算原本的基礎滿版縮放比例
+      const baseScale = Math.min(winW / targetW, winH / targetH);
+      
+      // ✅ 核心魔法：將基礎比例乘上您的自訂倍率
+      const finalScale = baseScale * customScale;
       
       wrapper.style.transform = 'none';
-      wrapper.style.zoom = scale;
+      wrapper.style.zoom = finalScale;
       
-      const xOffset = (winW - targetW * scale) / 2;
-      const yOffset = (winH - targetH * scale) / 2;
+      // 搭配新的縮放比例進行完美置中
+      const xOffset = (winW - targetW * finalScale) / 2;
+      const yOffset = (winH - targetH * finalScale) / 2;
       
       wrapper.style.left = `${Math.max(0, xOffset)}px`;
       wrapper.style.top = `${Math.max(0, yOffset)}px`;
