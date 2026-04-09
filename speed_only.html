@@ -56,7 +56,7 @@
 
         .speed-val.fire {
             color: #FF1111; 
-            -webkit-text-stroke: 4px #FFFF00; 
+            -webkit-text-stroke: 0.5px #FFFF00; 
             text-shadow: 0 0 35px rgba(255, 0, 0, 0.8), 8px 8px 15px rgba(0,0,0,0.8); 
         }
     </style>
@@ -106,7 +106,7 @@
       document.getElementById('speed-container').classList.remove('active');
       document.getElementById('speed-text').innerText = "--";
       document.getElementById('speed-text').classList.remove('fire');
-  }, 8000);
+  }, 20000);
 
   onValue(ref(db, basePath), (snapshot) => {
       const radarData = snapshot.val();
