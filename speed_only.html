@@ -93,7 +93,7 @@
   const gameId = urlParams.get('gameId');
   const basePath = gameId ? `games/${gameId}/radar` : 'scoreboard/radar';
 
-  let customScale = 1.0;
+  let customScale = 0.3;
   if (urlParams.has('scale')) {
       const parsedScale = parseFloat(urlParams.get('scale'));
       if (!isNaN(parsedScale) && parsedScale > 0) customScale = parsedScale;
