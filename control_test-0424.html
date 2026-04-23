@@ -517,10 +517,9 @@
   const dbRef = ref(db);
   const auth = getAuth(app);
   let gameId = null;
+  const urlParams = new URLSearchParams(window.location.search);
 
   // 路由與初始化架構
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get('gameId');
   let basePath = 'scoreboard'; 
   if (gameId) basePath = `games/${gameId}`;
 
@@ -791,7 +790,7 @@
   };
 
   // 獨立監聽 Theme 變化，完全不影響您原本的 onValue 邏輯
-  function listenThemeChanges() {
+  //function listenThemeChanges() {
       onValue(ref(db, `games/${gameId}/theme`), (snapshot) => {
           const currentTheme = snapshot.val() || 'modern';
           
@@ -800,15 +799,6 @@
           const selectedEl = document.getElementById(`theme-${currentTheme}`);
           if (selectedEl) selectedEl.classList.add('selected');
       });
-  }
-
-  // 設定一個智慧定時器，等待您點擊「進入賽事」取得 gameId 後，自動啟動風格監聽
-  const themeCheckInterval = setInterval(() => {
-      if (typeof gameId !== 'undefined' && gameId) {
-          listenThemeChanges();
-          clearInterval(themeCheckInterval); // 啟動後關閉定時器
-      }
-  }, 1000);
 
 // ==========================================
   // 🎨 轉播包裝風格選擇邏輯 (獨立擴充模組)
@@ -844,12 +834,28 @@
   }, 1000);
 
 // ==========================================
-// 🔒 權限監聽與畫面狀態切換
+  // ⚡ 1. 將變數宣告移至安全區 (解決尚未初始化錯誤)
+  // ==========================================
+  let currentSpeedOffset = 0;
+
+ window.updateSpeedUrl = function() {
+      const speedInput = document.getElementById('speed-url-result');
+      if (!speedInput) return;
+      
+      // 不管這份檔案叫什麼名字，直接把最後的檔名替換成 speed_only.html
+      const currentUrl = window.location.href.split('?')[0];
+      const baseUrl = currentUrl.replace(/[^\/]+$/, 'speed_only.html');
+      
+      speedInput.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
+  };
+
+  // ==========================================
+  // 🔒 2. 權限監聽與畫面狀態切換 (解決 user 未定義錯誤)
+  // ==========================================
   onAuthStateChanged(auth, (user) => {
       const loginView = document.getElementById('login-view');
       const homeView = document.getElementById('home-view');
       const controllerView = document.getElementById('controller-view');
-      const topNav = document.getElementById('top-nav');
       const urlParams = new URLSearchParams(window.location.search);
 
       if (user) {
@@ -861,7 +867,6 @@
               gameId = urlParams.get('gameId');
               if (homeView) homeView.style.display = 'none';
               if (controllerView) controllerView.style.display = 'block';
-              if (topNav) topNav.style.display = 'flex';
               
               // 執行您原本的資料載入邏輯
               if (typeof window.loadGameData === 'function') window.loadGameData();
@@ -869,170 +874,60 @@
               // 進入大廳模式
               if (homeView) homeView.style.display = 'block';
               if (controllerView) controllerView.style.display = 'none';
-              if (topNav) topNav.style.display = 'none';
 
               // 載入列表資料
               if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
               if (typeof window.loadTeams === 'function') window.loadTeams();
               
               // 更新獨立球速網址
-              setTimeout(updateSpeedUrl, 500);
+              setTimeout(window.updateSpeedUrl, 500);
           }
       } else {
           // ❌ 未登入：強制顯示登入框，隱藏所有功能介面
           if (loginView) loginView.style.display = 'flex';
           if (homeView) homeView.style.display = 'none';
           if (controllerView) controllerView.style.display = 'none';
-          if (topNav) topNav.style.display = 'none';
-          
-          // 如果網址帶有參數但未登入，清除參數回到乾淨的頁面
-          if (urlParams.has('gameId')) {
-              window.history.replaceState({}, document.title, "control.html");
-          }
       }
   });
+
+  // ==========================================
+  // 🔑 3. 登入、登出與按鈕綁定
+  // ==========================================
   window.loginSystem = function() {
       const email = document.getElementById('login-email').value;
       const pwd = document.getElementById('login-password').value;
-      const errDiv = document.getElementById('login-error');
-      errDiv.style.display = 'none';
+      signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("登入失敗：帳號或密碼錯誤"));
+  };
 
-      signInWithEmailAndPassword(auth, email, pwd)
-          .catch((error) => {
-              errDiv.innerText = "登入失敗：帳號或密碼錯誤";
-              errDiv.style.display = 'block';
+window.logoutSystem = function() {
+      if (confirm("確定要登出系統嗎？")) {
+          signOut(auth).then(() => {
+              // 登出後，清空網址參數並重新載入當前檔案
+              window.location.href = window.location.pathname;
           });
-  };
-
-  window.logoutSystem = function() {
-      signOut(auth).then(() => {
-          window.location.href = "control.html";
-      });
-  };
-
-  // ==========================================
-  // ⚡ 獨立球速小工具邏輯
-  // ==========================================
-  let currentSpeedOffset = 0;
-  const offsetDisplay = document.getElementById('display-offset');
-  const speedUrlResult = document.getElementById('speed-url-result');
-
-  function updateSpeedUrl() {
-      const currentUrl = window.location.href.split('?')[0]; 
-      const baseUrl = currentUrl.replace('control.html', 'speed_only.html');
-      let finalUrl = baseUrl;
-      if (currentSpeedOffset !== 0) finalUrl += `?offset=${currentSpeedOffset}`;
-      if(speedUrlResult) speedUrlResult.value = finalUrl;
-  }
-
-  const btnPlus = document.getElementById('btn-offset-plus');
-  if(btnPlus) {
-      btnPlus.addEventListener('click', () => {
-          currentSpeedOffset++;
-          offsetDisplay.innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          updateSpeedUrl();
-      });
-
-      document.getElementById('btn-offset-minus').addEventListener('click', () => {
-          currentSpeedOffset--;
-          offsetDisplay.innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          updateSpeedUrl();
-      });
-
-      document.getElementById('btn-copy-speed').addEventListener('click', () => {
-          speedUrlResult.select();
-          speedUrlResult.setSelectionRange(0, 99999); 
-          navigator.clipboard.writeText(speedUrlResult.value).then(() => {
-              const btn = document.getElementById('btn-copy-speed');
-              const originalText = btn.innerText;
-              const originalBg = btn.style.background;
-              btn.innerText = '✅ 已複製！';
-              btn.style.background = '#2ecc71';
-              setTimeout(() => {
-                  btn.innerText = originalText;
-                  btn.style.background = originalBg;
-              }, 2000);
-          }).catch(err => alert("請手動全選複製網址！"));
-      });
-      
-      // 修正 1：確保網頁 DOM 完全載入後，才初始化網址，避免找不到欄位
-  document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(updateSpeedUrl, 500); 
-  });
-
-// 🔒 權限監聽與資料自動載入
-  onAuthStateChanged(auth, (user) => {
-      const loginView = document.getElementById('login-view');
-      const homeView = document.getElementById('home-view');
-      const controllerView = document.getElementById('controller-view');
-      const urlParams = new URLSearchParams(window.location.search);
-
-      if (user) {
-          if (loginView) loginView.style.display = 'none';
-          if (urlParams.has('gameId')) {
-              gameId = urlParams.get('gameId');
-              if (homeView) homeView.style.display = 'none';
-              if (controllerView) controllerView.style.display = 'block';
-              // 進入控制頁後的初始化
-              if (typeof window.loadGameData === 'function') window.loadGameData();
-          } else {
-              if (homeView) homeView.style.display = 'block';
-              if (controllerView) controllerView.style.display = 'none';
-              
-              // 🚀 關鍵修復：登入後才載入大廳列表
-              console.log("登入成功，開始載入歷史資料...");
-              if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
-              if (typeof window.loadTeams === 'function') window.loadTeams();
-              
-              // 初始化球速網址
-              setTimeout(updateSpeedUrl, 1000);
-          }
-      } else {
-          if (loginView) loginView.style.display = 'flex';
-          if (homeView) homeView.style.display = 'none';
-          if (controllerView) controllerView.style.display = 'none';
       }
-  });
-
-  // 登入/登出函數 (掛載到 window 以供 HTML 使用)
-  window.loginSystem = function() {
-      const email = document.getElementById('login-email').value;
-      const pwd = document.getElementById('login-password').value;
-      signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("帳號密碼錯誤"));
   };
-
-  window.logoutSystem = function() {
-      signOut(auth).then(() => window.location.href = "control.html");
-  };
-
-  // ⚡ 獨立球速工具邏輯 (修正版)
-  let currentSpeedOffset = 0;
-  function updateSpeedUrl() {
-      const speedInput = document.getElementById('speed-url-result');
-      if (!speedInput) return;
-      const baseUrl = window.location.href.split('?')[0].replace('control.html', 'speed_only.html');
-      speedInput.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
-  }
 
   // 綁定球速工具按鈕
   document.addEventListener('click', (e) => {
       if (e.target.id === 'btn-offset-plus') {
           currentSpeedOffset++;
           document.getElementById('display-offset').innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          updateSpeedUrl();
+          window.updateSpeedUrl();
       }
       if (e.target.id === 'btn-offset-minus') {
           currentSpeedOffset--;
           document.getElementById('display-offset').innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          updateSpeedUrl();
+          window.updateSpeedUrl();
       }
       if (e.target.id === 'btn-copy-speed') {
           const input = document.getElementById('speed-url-result');
-          input.select();
-          navigator.clipboard.writeText(input.value).then(() => alert("網址已複製！"));
+          if (input) {
+              input.select();
+              navigator.clipboard.writeText(input.value).then(() => alert("網址已複製！"));
+          }
       }
   });
-
 </script>
 </body>
 </html>
