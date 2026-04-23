@@ -574,15 +574,45 @@
   window.createLibraryTeam = () => { const n = document.getElementById('new-lib-team-name').value; if(!n)return alert("請輸入名稱"); set(push(ref(db, 'library_teams')), { name: n, roster: Array(25).fill({ num: '', name: '', H: 0, AB: 0 }) }); document.getElementById('new-lib-team-name').value = ''; };
   window.openLibraryRosterModal = async (id, name) => { currentEditingLibTeamId = id; document.getElementById('lib-roster-modal-title').innerText = `編輯：${name}`; const s = await get(child(dbRef, `library_teams/${id}/roster`)); const r = s.exists()?s.val():[]; const c = document.getElementById('lib-roster-inputs-container'); c.innerHTML=''; for(let i=0;i<25;i++){ c.innerHTML+=`<div class="lib-roster-row"><input type="number" id="lib-roster-num-${i}" placeholder="背號" value="${r[i]?.num||''}"><input type="text" id="lib-roster-name-${i}" placeholder="姓名" value="${r[i]?.name||''}"></div>`;} document.getElementById('lib-roster-modal').style.display='flex'; };
   window.saveLibraryRoster = () => { if(!currentEditingLibTeamId)return; let r=[]; for(let i=0;i<25;i++){r.push({num:document.getElementById(`lib-roster-num-${i}`).value, name:document.getElementById(`lib-roster-name-${i}`).value, H:0, AB:0});} update(ref(db, `library_teams/${currentEditingLibTeamId}`), {roster:r}).then(()=>closeModal('lib-roster-modal')); };
+// ==========================================
+  // 🏆 建立新賽事邏輯 (保留載入隊伍名單功能 + 修正網址跳轉)
+  // ==========================================
   window.createNewGame = async () => {
-      const title=document.getElementById('new-game-title').value, aId=document.getElementById('new-game-away').value, hId=document.getElementById('new-game-home').value;
-      if(!title||!aId||!hId) return alert('請填寫完整');
-      const aData = (await get(child(dbRef, `library_teams/${aId}`))).val(), hData = (await get(child(dbRef, `library_teams/${hId}`))).val();
-      const newId = 'game_' + Date.now();
-      await set(ref(db, `games/${newId}`), { title:title, teams:{away:{name:aData.name,score:0}, home:{name:hData.name,score:0}}, rosters:{away:aData.roster||[], home:hData.roster||[]}, gameInfo:{inning:1, isTop:true}, count:{balls:0, strikes:0, outs:0}, bases:{first:false, second:false, third:false}, pitchCount:{away:0, home:0}, lineups:{includePitcher:false, away:{}, home:{}}, radarOffset: 0 });
-      window.location.href = `control.html?gameId=${newId}`;
+      try {
+          const title = document.getElementById('new-game-title').value;
+          const aId = document.getElementById('new-game-away').value;
+          const hId = document.getElementById('new-game-home').value;
+          
+          if (!title || !aId || !hId) return alert('請填寫完整');
+          
+          // 抓取您原本建立好的隊伍資料庫
+          const aData = (await get(child(dbRef, `library_teams/${aId}`))).val();
+          const hData = (await get(child(dbRef, `library_teams/${hId}`))).val();
+          
+          const newId = 'game_' + Date.now();
+          
+          // 等待寫入 Firebase (您原本的寫法非常正確)
+          await set(ref(db, `games/${newId}`), { 
+              title: title, 
+              theme: "modern", // ✅ 補上預設主題風格，避免記分板沒吃到 CSS
+              teams: { away: { name: aData.name, score: 0 }, home: { name: hData.name, score: 0 } }, 
+              rosters: { away: aData.roster || [], home: hData.roster || [] }, 
+              gameInfo: { inning: 1, isTop: true }, 
+              count: { balls: 0, strikes: 0, outs: 0 }, 
+              bases: { first: false, second: false, third: false }, 
+              pitchCount: { away: 0, home: 0 }, 
+              lineups: { includePitcher: false, away: {}, home: {} }, 
+              radarOffset: 0 
+          });
+          
+          // 🟢 唯一關鍵修改：用 window.location.pathname 動態抓取檔名，取代寫死的 control.html
+          window.location.href = window.location.pathname + `?gameId=${newId}`;
+          
+      } catch (error) {
+          console.error("建立賽事發生錯誤:", error);
+          alert("建立賽事失敗，請檢查網路連線或權限設定！");
+      }
   };
-
   // ================= 視圖 2: 轉播控制台邏輯 =================
   const positions = ["", "P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "PH", "PR"];
 
