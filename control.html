@@ -477,7 +477,7 @@
   import { getDatabase, ref, onValue, update, get, child, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    // TODO: 貼上您的 Firebase Config
+  // 1. Firebase 核心配置 (請務必在此填入你正確的 API Key)
   const firebaseConfig = {
   apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
   authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
@@ -488,108 +488,131 @@
   appId: "1:179359096477:web:8188f897371651442e7e74"
   };
 
-  // 2. 系統全局初始化 (確保變數只宣告一次)
+  // 2. 系統初始化 (全域變數只在最上方宣告一次)
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const dbRef = ref(db);
   const auth = getAuth(app);
+  
+  // 建立一個存放資料的變數，讓所有功能都能共用
   const urlParams = new URLSearchParams(window.location.search);
-  let gameId = urlParams.get('gameId') || null; // 從網址抓取 ID
+  let gameId = urlParams.get('gameId'); 
   let currentSpeedOffset = 0;
 
   // ==========================================
-  // 🔒 權限與畫面管理中心 (解決跳轉與卡死問題)
+  // 🔒 權限監聽與畫面切換邏輯 (解決跳轉問題)
   // ==========================================
   onAuthStateChanged(auth, (user) => {
-      const loginView = document.getElementById('login-view');
-      const homeView = document.getElementById('home-view');
-      const controllerView = document.getElementById('controller-view');
-      const topNav = document.getElementById('top-nav');
+    const loginView = document.getElementById('login-view');
+    const homeView = document.getElementById('home-view');
+    const controllerView = document.getElementById('controller-view');
+    const topNav = document.getElementById('top-nav');
 
-      if (user) {
-          // ✅ 已登入：隱藏登入介面
-          if (loginView) loginView.style.display = 'none';
+    if (user) {
+      // ✅ 已登入：隱藏登入介面
+      if (loginView) loginView.style.display = 'none';
 
-          if (gameId) {
-              // A. 顯示賽事控制面板
-              if (homeView) homeView.style.display = 'none';
-              if (controllerView) controllerView.style.display = 'block';
-              if (topNav) {
-                  topNav.style.display = 'flex';
-                  document.getElementById('nav-game-title').innerText = `賽事: ${gameId}`;
-                  // 動態更新導覽列連結
-                  document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId}`;
-              }
-              // 執行資料監聽與載入
-              listenThemeChanges();
-              if (typeof window.loadGameData === 'function') window.loadGameData();
-          } else {
-              // B. 顯示賽事大廳
-              if (homeView) homeView.style.display = 'block';
-              if (controllerView) controllerView.style.display = 'none';
-              if (topNav) topNav.style.display = 'none';
-              
-              // 載入大廳資料
-              if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
-              if (typeof window.loadTeams === 'function') window.loadTeams();
-              setTimeout(window.updateSpeedUrl, 500);
-          }
+      if (gameId) {
+        // A. 模式：賽事控制台
+        if (homeView) homeView.style.display = 'none';
+        if (controllerView) controllerView.style.display = 'block';
+        if (topNav) {
+          topNav.style.display = 'flex';
+          document.getElementById('nav-game-title').innerText = `賽事: ${gameId}`;
+          document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId}`;
+        }
+        // 啟動資料監聽 (讓按鈕有反應)
+        if (typeof window.loadGameData === 'function') window.loadGameData();
+        listenThemeChanges();
       } else {
-          // ❌ 未登入：強制鎖定畫面，不跳轉
-          if (loginView) loginView.style.display = 'flex';
-          if (homeView) homeView.style.display = 'none';
-          if (controllerView) controllerView.style.display = 'none';
-          if (topNav) topNav.style.display = 'none';
+        // B. 模式：賽事大廳
+        if (homeView) homeView.style.display = 'block';
+        if (controllerView) controllerView.style.display = 'none';
+        if (topNav) topNav.style.display = 'none';
+        
+        // 載入大廳列表
+        if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
+        if (typeof window.loadTeams === 'function') window.loadTeams();
+        setTimeout(window.updateSpeedUrl, 500);
       }
+    } else {
+      // ❌ 未登入：強制顯示登入框
+      if (loginView) loginView.style.display = 'flex';
+      if (homeView) homeView.style.display = 'none';
+      if (controllerView) controllerView.style.display = 'none';
+      if (topNav) topNav.style.display = 'none';
+    }
   });
 
   // ==========================================
-  // 🕹️ 控制台功能函數 (確保連結到 Firebase)
+  // 🔑 基礎功能 (解決 "is not defined" 錯誤)
   // ==========================================
-  window.loginSystem = (email, pwd) => signInWithEmailAndPassword(auth, email, pwd).catch(e => alert("登入失敗"));
-  window.logoutSystem = () => signOut(auth).then(() => window.location.href = window.location.pathname);
   
-  window.connectGame = () => {
-      const id = document.getElementById('game-id-input').value.trim();
-      if (id) window.location.href = window.location.pathname + `?gameId=${id}`;
+  // 登入功能 (強制掛載到 window 讓按鈕看得到)
+  window.loginSystem = function() {
+    const email = document.getElementById('login-email').value;
+    const pwd = document.getElementById('login-password').value;
+    signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("帳號密碼錯誤"));
   };
 
-  // 獨立球速網址產生器
-  window.updateSpeedUrl = () => {
-      const input = document.getElementById('speed-url-result');
-      if (!input) return;
-      const baseUrl = window.location.href.split('?')[0].replace(/[^\/]+$/, 'speed_only.html');
-      input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
+  // 登出功能
+  window.logoutSystem = function() {
+    if (confirm("確定要登出嗎？")) {
+      signOut(auth).then(() => {
+        window.location.href = window.location.pathname; // 回到乾淨的首頁
+      });
+    }
   };
 
-  // 萬用更新函數 (分數、BSO 等)
-  window.updateScore = (team, val) => {
-      if(!gameId) return;
-      const scoreRef = ref(db, `games/${gameId}/teams/${team}/score`);
-      get(scoreRef).then(s => update(ref(db, `games/${gameId}/teams/${team}`), { score: Math.max(0, (s.val()||0) + val) }));
+  // 進入比賽按鈕
+  window.connectGame = function() {
+    const id = document.getElementById('game-id-input').value.trim();
+    if (id) window.location.href = window.location.pathname + `?gameId=${id}`;
   };
 
-  // 風格切換
-  window.selectTheme = (themeId) => update(ref(db, `games/${gameId}`), { theme: themeId });
+  // ==========================================
+  // ⚡ 速度工具與主題監聽
+  // ==========================================
+  window.updateSpeedUrl = function() {
+    const input = document.getElementById('speed-url-result');
+    if (!input) return;
+    const baseUrl = window.location.href.split('?')[0].replace(/[^\/]+$/, 'speed_only.html');
+    input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
+  };
 
   function listenThemeChanges() {
-      onValue(ref(db, `games/${gameId}/theme`), (s) => {
-          const theme = s.val() || 'modern';
-          document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
-          const target = document.getElementById(`theme-${theme}`);
-          if (target) target.classList.add('selected');
-      });
+    if (!gameId) return;
+    onValue(ref(db, `games/${gameId}/theme`), (s) => {
+      const theme = s.val() || 'modern';
+      document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
+      const target = document.getElementById(`theme-${theme}`);
+      if (target) target.classList.add('selected');
+    });
   }
 
-  // 球速 Offset 控制
+  // 球速調整按鈕事件監控
   document.addEventListener('click', (e) => {
-      if (e.target.id === 'btn-offset-plus') { currentSpeedOffset++; document.getElementById('display-offset').innerText = currentSpeedOffset; window.updateSpeedUrl(); }
-      if (e.target.id === 'btn-offset-minus') { currentSpeedOffset--; document.getElementById('display-offset').innerText = currentSpeedOffset; window.updateSpeedUrl(); }
-      if (e.target.id === 'btn-copy-speed') { 
-          const el = document.getElementById('speed-url-result'); 
-          el.select(); navigator.clipboard.writeText(el.value).then(() => alert("網址已複製")); 
-      }
+    if (e.target.id === 'btn-offset-plus') {
+      currentSpeedOffset++;
+      document.getElementById('display-offset').innerText = currentSpeedOffset;
+      window.updateSpeedUrl();
+    }
+    if (e.target.id === 'btn-offset-minus') {
+      currentSpeedOffset--;
+      document.getElementById('display-offset').innerText = currentSpeedOffset;
+      window.updateSpeedUrl();
+    }
+    if (e.target.id === 'btn-copy-speed') {
+      const el = document.getElementById('speed-url-result');
+      el.select();
+      navigator.clipboard.writeText(el.value).then(() => alert("網址已複製"));
+    }
   });
+
+  // 主題切換功能
+  window.selectTheme = function(themeId) {
+    if (gameId) update(ref(db, `games/${gameId}`), { theme: themeId });
+  };
 </script>
 </body>
 </html>
