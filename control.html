@@ -472,6 +472,7 @@
 <div class="modal-overlay" id="pitcher-modal"><div class="modal-content" style="max-width: 300px;"><div class="modal-header"><h3>選擇投手</h3><button class="btn-close" onclick="closeModal('pitcher-modal')">&times;</button></div><select id="pitcher-select" style="width: 100%; padding: 10px; font-size: 16px; margin-bottom: 20px;"></select><button class="btn-save-modal" onclick="savePitcher()">確認更換</button></div></div>
 <div class="modal-overlay" id="lib-roster-modal"><div class="modal-content"><div class="modal-header"><h3 id="lib-roster-modal-title">編輯資料庫隊伍名單</h3><button class="btn-close" onclick="closeModal('lib-roster-modal')">&times;</button></div><div style="font-size: 12px; color: #888; margin-bottom: 10px;">請預先輸入背號與姓名</div><div class="lib-roster-row" style="border-bottom: 2px solid #333; padding-bottom: 5px; font-weight: bold; text-align: center;"><div>背號</div><div>姓名</div></div><div id="lib-roster-inputs-container"></div><button class="btn-save-modal" onclick="saveLibraryRoster()">儲存至資料庫</button></div></div>
 
+<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, onValue, update, get, child, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
