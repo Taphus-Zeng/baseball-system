@@ -566,61 +566,80 @@
     }
   };
 
-  // 3. 讀取並顯示「舊有賽事列表」
-  window.loadRecentGames = async function() {
+  // ==========================================
+  // 🚀 即時監控版：自動更新賽事與隊伍列表
+  // ==========================================
+
+  // 1. 即時監控賽事列表 (取代舊有的 loadRecentGames)
+  window.loadRecentGames = function() {
     const container = document.getElementById('recent-games-list');
     if (!container) return;
-    try {
-      const snapshot = await get(child(dbRef, 'games'));
-      const games = snapshot.val();
+
+    // 使用 onValue 建立永久連線，資料一變畫面就變
+    onValue(ref(db, 'games'), (snapshot) => {
       container.innerHTML = '';
-      if (!games) { container.innerHTML = '<p style="color:#888;">尚未建立任何賽事</p>'; return; }
+      const games = snapshot.val();
+      if (!games) { 
+        container.innerHTML = '<p style="color:#888; text-align:center;">目前尚無賽事記錄</p>'; 
+        return; 
+      }
       
-      // 由新到舊排序
+      // 將賽事由新到舊排序
       Object.keys(games).reverse().forEach(id => {
         const g = games[id];
         const div = document.createElement('div');
         div.className = 'game-item';
-        div.style = "display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px; margin-bottom:8px; border-radius:6px; border:1px solid #ddd;";
+        div.style = "display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
+        
         div.innerHTML = `
-          <strong style="color:#101451;">${g.title || '未命名賽事'}</strong>
-          <button onclick="location.href=window.location.pathname+'?gameId=${id}'" style="background:#3498db; color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">進入控制</button>
+          <div style="display:flex; flex-direction:column;">
+            <strong style="color:#101451; font-size:18px;">${g.title || '未命名賽事'}</strong>
+            <small style="color:#888;">ID: ${id}</small>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button onclick="location.href=window.location.pathname+'?gameId=${id}'" style="background:#3498db; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">進入控制台</button>
+            <button onclick="window.deleteGame('${id}', '${g.title || id}')" style="background:transparent; color:#e74c3c; border:1px solid #e74c3c; padding:8px 15px; border-radius:6px; cursor:pointer;">刪除</button>
+          </div>
         `;
         container.appendChild(div);
       });
-    } catch (e) { console.error("賽事載入失敗", e); }
+    }, (error) => {
+      console.error("賽事監聽失敗:", error);
+    });
   };
 
-  // 4. 讀取並顯示「舊有隊伍與名單」
-  window.loadTeams = async function() {
+  // 2. 即時監控隊伍列表 (取代舊有的 loadTeams)
+  window.loadTeams = function() {
     const container = document.getElementById('teams-list');
     const awaySel = document.getElementById('new-game-away');
     const homeSel = document.getElementById('new-game-home');
-    if (!container) return;
 
-    try {
-      const snapshot = await get(child(dbRef, 'library_teams'));
-      const teams = snapshot.val();
-      container.innerHTML = '';
+    onValue(ref(db, 'library_teams'), (snapshot) => {
+      // 每次資料更新時，先清空舊內容
+      if(container) container.innerHTML = '';
       if(awaySel) awaySel.innerHTML = '<option value="">-- 選擇客隊 --</option>';
       if(homeSel) homeSel.innerHTML = '<option value="">-- 選擇主隊 --</option>';
 
-      if (!teams) { container.innerHTML = '<p style="color:#888;">尚無球隊資料</p>'; return; }
+      const teams = snapshot.val();
+      if (!teams) {
+        if(container) container.innerHTML = '<p style="color:#888;">請先新增球隊</p>';
+        return;
+      }
       
       Object.keys(teams).forEach(id => {
         const t = teams[id];
-        // 更新大廳列表
-        const div = document.createElement('div');
-        div.className = 'team-item';
-        div.style = "background:#eee; padding:8px; margin-bottom:5px; border-radius:4px; font-size:14px;";
-        div.innerHTML = `<span>🏠 ${t.name} (球員: ${(t.roster||[]).length} 人)</span>`;
-        container.appendChild(div);
-        
-        // 更新建立賽事的下拉選單
+        // 更新大廳右側的隊伍名單
+        if(container) {
+          const div = document.createElement('div');
+          div.style = "background:#f1f3f5; padding:10px; margin-bottom:8px; border-radius:6px; font-size:14px; color:#495057; border-left:4px solid #101451;";
+          div.innerHTML = `<strong>${t.name}</strong> <span style="float:right; color:#888;">${(t.roster||[]).length} 人</span>`;
+          container.appendChild(div);
+        }
+        // 同步更新「建立新賽事」的下拉選單
         if(awaySel) awaySel.innerHTML += `<option value="${id}">${t.name}</option>`;
         if(homeSel) homeSel.innerHTML += `<option value="${id}">${t.name}</option>`;
       });
-    } catch (e) { console.error("隊伍載入失敗", e); }
+    });
   };
 
   // 5. 建立新賽事 (修正按鈕無反應問題)
@@ -630,6 +649,24 @@
     const hId = document.getElementById('new-game-home').value;
     
     if (!title || !aId || !hId) return alert('請填寫賽事名稱並選擇兩支參賽隊伍！');
+
+// ==========================================
+  // 🗑️ 刪除賽事功能
+  // ==========================================
+  window.deleteGame = async function(id, title) {
+    if (!confirm(`⚠️ 確定要刪除賽事「${title}」嗎？\n刪除後資料將無法復原！`)) return;
+
+    try {
+      // 使用 set(ref, null) 在 Firebase 中代表刪除該路徑的所有資料
+      await set(ref(db, `games/${id}`), null);
+      alert("賽事已刪除");
+      
+      // 🚀 核心動作：刪除成功後，重新呼叫一次載入函數，刷新大廳畫面
+      window.loadRecentGames();
+    } catch (e) {
+      alert("刪除失敗: " + e.message);
+    }
+  };
 
     try {
       // 抓取隊伍名單與數據
