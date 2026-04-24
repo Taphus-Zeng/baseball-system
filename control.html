@@ -855,44 +855,49 @@
       speedInput.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
   };
 
-  // ==========================================
-  // 🔒 2. 權限監聽與畫面狀態切換 (解決 user 未定義錯誤)
-  // ==========================================
+ // 🔒 權限監聽與畫面狀態切換 (修復跳回大廳 Bug 版)
   onAuthStateChanged(auth, (user) => {
       const loginView = document.getElementById('login-view');
       const homeView = document.getElementById('home-view');
       const controllerView = document.getElementById('controller-view');
-      const urlParams = new URLSearchParams(window.location.search);
+      const topNav = document.getElementById('top-nav');
+      
+      // 核心修正：每次監聽觸發時，都重新抓取最新的網址參數
+      const currentParams = new URLSearchParams(window.location.search);
+      const activeGameId = currentParams.get('gameId');
 
       if (user) {
-          // ✅ 已登入：隱藏登入框，根據網址顯示 大廳 或 控制頁
+          // ✅ 已登入
           if (loginView) loginView.style.display = 'none';
 
-          if (urlParams.has('gameId')) {
+          if (activeGameId) {
               // 進入賽事控制模式
-              gameId = urlParams.get('gameId');
+              gameId = activeGameId; // 賦值給全域變數
               if (homeView) homeView.style.display = 'none';
               if (controllerView) controllerView.style.display = 'block';
+              if (topNav) topNav.style.display = 'flex';
               
-              // 執行您原本的資料載入邏輯
               if (typeof window.loadGameData === 'function') window.loadGameData();
           } else {
               // 進入大廳模式
               if (homeView) homeView.style.display = 'block';
               if (controllerView) controllerView.style.display = 'none';
+              if (topNav) topNav.style.display = 'none';
 
-              // 載入列表資料
               if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
               if (typeof window.loadTeams === 'function') window.loadTeams();
               
-              // 更新獨立球速網址
-              setTimeout(window.updateSpeedUrl, 500);
+              setTimeout(updateSpeedUrl, 500);
           }
       } else {
-          // ❌ 未登入：強制顯示登入框，隱藏所有功能介面
+          // ❌ 未登入：只顯示登入框，保持網址不動！
           if (loginView) loginView.style.display = 'flex';
           if (homeView) homeView.style.display = 'none';
           if (controllerView) controllerView.style.display = 'none';
+          if (topNav) topNav.style.display = 'none';
+          
+          // 注意：這裡我們刪除了原有的清空網址 (replaceState) 邏輯，
+          // 這樣登入成功後，網址上的 gameId 才會被保留並正確讀取。
       }
   });
 
