@@ -489,18 +489,19 @@
   };
 
 
-  // 2. 初始化系統 (變數僅在此宣告一次)
+  // 2. 初始化系統
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const dbRef = ref(db);
   const auth = getAuth(app);
-  const urlParams = new URLSearchParams(window.location.search);
   
-  let gameId = urlParams.get('gameId'); // 從網址抓取當前賽事 ID
+  // 核心變數 (只在此處宣告一次)
+  const urlParams = new URLSearchParams(window.location.search);
+  let gameId = urlParams.get('gameId'); 
   let currentSpeedOffset = 0;
 
   // ==========================================
-  // 🔒 權限監聽與畫面導向邏輯
+  // 🔒 權限監聽與畫面狀態管理中心
   // ==========================================
   onAuthStateChanged(auth, (user) => {
     const loginView = document.getElementById('login-view');
@@ -509,233 +510,158 @@
     const topNav = document.getElementById('top-nav');
 
     if (user) {
-      // ✅ 已登入：隱藏登入框
       if (loginView) loginView.style.display = 'none';
 
       if (gameId) {
-        // A. 進入「賽事控制台」模式
+        // A. 賽事控制模式
         if (homeView) homeView.style.display = 'none';
         if (controllerView) controllerView.style.display = 'block';
         if (topNav) {
           topNav.style.display = 'flex';
           document.getElementById('nav-game-title').innerText = `賽事: ${gameId}`;
-          document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId}`;
         }
-        // 啟動控制台資料監聽與名單載入
-        if (typeof window.loadGameData === 'function') window.loadGameData();
-        listenThemeChanges();
+        // 🚀 重點修復：啟動控制台監聽與函數掛載
+        initScoreboardController();
       } else {
-        // B. 進入「賽事大廳」模式
+        // B. 賽事大廳模式
         if (homeView) homeView.style.display = 'block';
         if (controllerView) controllerView.style.display = 'none';
         if (topNav) topNav.style.display = 'none';
         
-        // 🚀 自動讀取：載入您之前建立的所有賽事與隊伍
-        window.loadRecentGames();
-        window.loadTeams();
-        setTimeout(window.updateSpeedUrl, 500);
+        // 🚀 重點修復：啟動大廳雷達，監聽現有隊伍與賽事
+        startLobbyListeners();
       }
     } else {
-      // ❌ 未登入：只顯示登入畫面
+      // 未登入
       if (loginView) loginView.style.display = 'flex';
       if (homeView) homeView.style.display = 'none';
       if (controllerView) controllerView.style.display = 'none';
-      if (topNav) topNav.style.display = 'none';
     }
   });
 
   // ==========================================
-  // 🕹️ 核心功能 (掛載到 window 確保 HTML 按鈕有效)
+  // 🏠 1. 大廳資料讀取邏輯 (解決清單空白問題)
   // ==========================================
-
-  // 1. 登入系統
-  window.loginSystem = function() {
-    const email = document.getElementById('login-email').value.trim();
-    const pwd = document.getElementById('login-password').value.trim();
-    if (!email || !pwd) return alert("請輸入帳號密碼");
-    signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("登入失敗: " + err.message));
-  };
-
-  // 2. 登出系統
-  window.logoutSystem = function() {
-    if (confirm("確定要登出轉播中心嗎？")) {
-      signOut(auth).then(() => {
-        // 登出後回到不帶參數的頁面
-        window.location.href = window.location.pathname;
-      });
-    }
-  };
-
-  // ==========================================
-  // 🚀 即時監控版：自動更新賽事與隊伍列表
-  // ==========================================
-
-  // 1. 即時監控賽事列表 (取代舊有的 loadRecentGames)
-  window.loadRecentGames = function() {
-    const container = document.getElementById('recent-games-list');
-    if (!container) return;
-
-    // 使用 onValue 建立永久連線，資料一變畫面就變
+  function startLobbyListeners() {
+    // 監聽賽事列表
     onValue(ref(db, 'games'), (snapshot) => {
+      const container = document.getElementById('recent-games-list');
+      if (!container) return;
       container.innerHTML = '';
       const games = snapshot.val();
-      if (!games) { 
-        container.innerHTML = '<p style="color:#888; text-align:center;">目前尚無賽事記錄</p>'; 
-        return; 
-      }
-      
-      // 將賽事由新到舊排序
+      if (!games) return;
+
       Object.keys(games).reverse().forEach(id => {
         const g = games[id];
         const div = document.createElement('div');
         div.className = 'game-item';
-        div.style = "display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
-        
+        // ✅ 加入所有要求的按鈕：進入、開啟 BSO、刪除
         div.innerHTML = `
-          <div style="display:flex; flex-direction:column;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
             <strong style="color:#101451; font-size:18px;">${g.title || '未命名賽事'}</strong>
-            <small style="color:#888;">ID: ${id}</small>
-          </div>
-          <div style="display:flex; gap:10px;">
-            <button onclick="location.href=window.location.pathname+'?gameId=${id}'" style="background:#3498db; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">進入控制台</button>
-            <button onclick="window.deleteGame('${id}', '${g.title || id}')" style="background:transparent; color:#e74c3c; border:1px solid #e74c3c; padding:8px 15px; border-radius:6px; cursor:pointer;">刪除</button>
+            <div style="display:flex; gap:8px;">
+              <button onclick="location.href=window.location.pathname+'?gameId=${id}'" class="btn-blue">進入控制台</button>
+              <button onclick="window.openOverlay('${id}')" class="btn-green">開啟BSO畫面</button>
+              <button onclick="window.deleteGame('${id}', '${g.title || id}')" class="btn-red">刪除</button>
+            </div>
           </div>
         `;
         container.appendChild(div);
       });
-    }, (error) => {
-      console.error("賽事監聽失敗:", error);
     });
-  };
 
-  // 2. 即時監控隊伍列表 (取代舊有的 loadTeams)
-  window.loadTeams = function() {
-    const container = document.getElementById('teams-list');
-    const awaySel = document.getElementById('new-game-away');
-    const homeSel = document.getElementById('new-game-home');
-
+    // 監聽隊伍列表
     onValue(ref(db, 'library_teams'), (snapshot) => {
-      // 每次資料更新時，先清空舊內容
-      if(container) container.innerHTML = '';
-      if(awaySel) awaySel.innerHTML = '<option value="">-- 選擇客隊 --</option>';
-      if(homeSel) homeSel.innerHTML = '<option value="">-- 選擇主隊 --</option>';
+      const container = document.getElementById('teams-list');
+      const awaySel = document.getElementById('new-game-away');
+      const homeSel = document.getElementById('new-game-home');
+      if (!container) return;
+
+      container.innerHTML = '';
+      if(awaySel) awaySel.innerHTML = '<option value="">選擇客隊</option>';
+      if(homeSel) homeSel.innerHTML = '<option value="">選擇主隊</option>';
 
       const teams = snapshot.val();
-      if (!teams) {
-        if(container) container.innerHTML = '<p style="color:#888;">請先新增球隊</p>';
-        return;
-      }
-      
+      if (!teams) return;
+
       Object.keys(teams).forEach(id => {
         const t = teams[id];
-        // 更新大廳右側的隊伍名單
-        if(container) {
-          const div = document.createElement('div');
-          div.style = "background:#f1f3f5; padding:10px; margin-bottom:8px; border-radius:6px; font-size:14px; color:#495057; border-left:4px solid #101451;";
-          div.innerHTML = `<strong>${t.name}</strong> <span style="float:right; color:#888;">${(t.roster||[]).length} 人</span>`;
-          container.appendChild(div);
-        }
-        // 同步更新「建立新賽事」的下拉選單
+        // 更新左側清單 (加入編輯按鈕預留)
+        const teamDiv = document.createElement('div');
+        teamDiv.style = "background:#eee; padding:10px; margin-bottom:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;";
+        teamDiv.innerHTML = `
+          <span><strong>${t.name}</strong> (${(t.roster||[]).length}人)</span>
+          <button onclick="window.editTeam('${id}')" style="font-size:12px; padding:2px 8px;">編輯</button>
+        `;
+        container.appendChild(teamDiv);
+
+        // 更新下拉選單
         if(awaySel) awaySel.innerHTML += `<option value="${id}">${t.name}</option>`;
         if(homeSel) homeSel.innerHTML += `<option value="${id}">${t.name}</option>`;
       });
     });
-  };
-
-  // 5. 建立新賽事 (修正按鈕無反應問題)
-  window.createNewGame = async function() {
-    const title = document.getElementById('new-game-title').value.trim();
-    const aId = document.getElementById('new-game-away').value;
-    const hId = document.getElementById('new-game-home').value;
-    
-    if (!title || !aId || !hId) return alert('請填寫賽事名稱並選擇兩支參賽隊伍！');
-
-// ==========================================
-  // 🗑️ 刪除賽事功能
-  // ==========================================
-  window.deleteGame = async function(id, title) {
-    if (!confirm(`⚠️ 確定要刪除賽事「${title}」嗎？\n刪除後資料將無法復原！`)) return;
-
-    try {
-      // 使用 set(ref, null) 在 Firebase 中代表刪除該路徑的所有資料
-      await set(ref(db, `games/${id}`), null);
-      alert("賽事已刪除");
-      
-      // 🚀 核心動作：刪除成功後，重新呼叫一次載入函數，刷新大廳畫面
-      window.loadRecentGames();
-    } catch (e) {
-      alert("刪除失敗: " + e.message);
-    }
-  };
-
-    try {
-      // 抓取隊伍名單與數據
-      const aData = (await get(child(dbRef, `library_teams/${aId}`))).val();
-      const hData = (await get(child(dbRef, `library_teams/${hId}`))).val();
-      const newId = 'game_' + Date.now();
-      
-      await set(ref(db, `games/${newId}`), {
-        title: title,
-        theme: "modern",
-        teams: { 
-          away: { name: aData.name, score: 0 }, 
-          home: { name: hData.name, score: 0 } 
-        },
-        rosters: { 
-          away: aData.roster || [], 
-          home: hData.roster || [] 
-        },
-        gameInfo: { inning: 1, isTop: true },
-        count: { balls: 0, strikes: 0, outs: 0 },
-        bases: { first: false, second: false, third: false },
-        pitchCount: { away: 0, home: 0 },
-        lineups: { includePitcher: false, away: {}, home: {} }
-      });
-      // 成功後跳轉
-      window.location.href = window.location.pathname + `?gameId=${newId}`;
-    } catch (e) { alert("建立賽事失敗: " + e.message); }
-  };
-
-  // 6. 建立新隊伍 (修正按鈕無反應問題)
-  window.createNewTeam = async function() {
-    const name = prompt("請輸入新球隊名稱:");
-    if (!name) return;
-
-    const newId = 'team_' + Date.now();
-    try {
-      await set(ref(db, `library_teams/${newId}`), {
-        name: name,
-        roster: [] // 初始空名單
-      });
-      alert("球隊建立成功！");
-      window.loadTeams(); // 重新整理列表
-    } catch (e) { alert("建立球隊失敗: " + e.message); }
-  };
+  }
 
   // ==========================================
-  // ⚡ 輔助工具 (球速與主題)
+  // 🎮 2. 賽事控制核心 (解決按鈕失效問題)
   // ==========================================
-  window.updateSpeedUrl = function() {
-    const input = document.getElementById('speed-url-result');
-    if (!input) return;
-    const currentUrl = window.location.href.split('?')[0];
-    const baseUrl = currentUrl.replace(/[^\/]+$/, 'speed_only.html');
-    input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
-  };
-
-  function listenThemeChanges() {
+  function initScoreboardController() {
     if (!gameId) return;
-    onValue(ref(db, `games/${gameId}/theme`), (s) => {
-      const theme = s.val() || 'modern';
-      document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
-      const target = document.getElementById(`theme-${theme}`);
-      if (target) target.classList.add('selected');
+
+    // 將控制函數掛載到 window，讓 HTML 的 onclick 可以呼叫
+    window.updateScore = (team, offset) => {
+      const scoreRef = ref(db, `games/${gameId}/teams/${team}/score`);
+      get(scoreRef).then(s => {
+        const newScore = Math.max(0, (s.val() || 0) + offset);
+        update(ref(db, `games/${gameId}/teams/${team}`), { score: newScore });
+      });
+    };
+
+    window.updateCount = (type, val) => {
+      update(ref(db, `games/${gameId}/count`), { [type]: val });
+    };
+
+    window.updateBase = (base, status) => {
+      update(ref(db, `games/${gameId}/bases`), { [base]: status });
+    };
+
+    // 監聽資料變化，更新控制台 UI 的顯示數值
+    onValue(ref(db, `games/${gameId}`), (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      // 這裡請根據您的 HTML ID 更新顯示 (例如分數、BSO 狀態)
+      if(document.getElementById('display-away-score')) document.getElementById('display-away-score').innerText = data.teams.away.score;
+      if(document.getElementById('display-home-score')) document.getElementById('display-home-score').innerText = data.teams.home.score;
     });
   }
 
-  // 風格切換功能
-  window.selectTheme = function(themeId) {
-    if (gameId) update(ref(db, `games/${gameId}`), { theme: themeId });
+  // ==========================================
+  // 🔑 3. 基礎功能掛載 (登入、刪除等)
+  // ==========================================
+  window.loginSystem = () => {
+    const email = document.getElementById('login-email').value;
+    const pwd = document.getElementById('login-password').value;
+    signInWithEmailAndPassword(auth, email, pwd).catch(e => alert("登入失敗"));
+  };
+
+  window.logoutSystem = () => signOut(auth).then(() => window.location.href = window.location.pathname);
+  
+  window.openOverlay = (id) => window.open(`overlay.html?gameId=${id}`, '_blank');
+
+  window.deleteGame = async (id, title) => {
+    if (confirm(`確定要刪除「${title}」嗎？`)) {
+      await set(ref(db, `games/${id}`), null);
+    }
+  };
+
+  window.editTeam = (id) => alert(`編輯隊伍功能 (ID: ${id}) 尚未實作。`);
+  
+  // 速度補償補丁
+  window.updateSpeedUrl = () => {
+      const input = document.getElementById('speed-url-result');
+      if(!input) return;
+      const baseUrl = window.location.href.split('?')[0].replace(/[^\/]+$/, 'speed_only.html');
+      input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
   };
 </script>
 </body>
