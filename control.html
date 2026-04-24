@@ -472,9 +472,8 @@
 <div class="modal-overlay" id="pitcher-modal"><div class="modal-content" style="max-width: 300px;"><div class="modal-header"><h3>選擇投手</h3><button class="btn-close" onclick="closeModal('pitcher-modal')">&times;</button></div><select id="pitcher-select" style="width: 100%; padding: 10px; font-size: 16px; margin-bottom: 20px;"></select><button class="btn-save-modal" onclick="savePitcher()">確認更換</button></div></div>
 <div class="modal-overlay" id="lib-roster-modal"><div class="modal-content"><div class="modal-header"><h3 id="lib-roster-modal-title">編輯資料庫隊伍名單</h3><button class="btn-close" onclick="closeModal('lib-roster-modal')">&times;</button></div><div style="font-size: 12px; color: #888; margin-bottom: 10px;">請預先輸入背號與姓名</div><div class="lib-roster-row" style="border-bottom: 2px solid #333; padding-bottom: 5px; font-weight: bold; text-align: center;"><div>背號</div><div>姓名</div></div><div id="lib-roster-inputs-container"></div><button class="btn-save-modal" onclick="saveLibraryRoster()">儲存至資料庫</button></div></div>
 
-<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, set, get, child, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, get, child, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     // TODO: 貼上您的 Firebase Config
@@ -488,417 +487,54 @@
   appId: "1:179359096477:web:8188f897371651442e7e74"
   };
 
+  // 2. 系統全局初始化 (確保變數只宣告一次)
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const dbRef = ref(db);
   const auth = getAuth(app);
-  let gameId = null;
   const urlParams = new URLSearchParams(window.location.search);
-
-  // 路由與初始化架構
-  let basePath = 'scoreboard'; 
-  if (gameId) basePath = `games/${gameId}`;
-
-  let localState = { isTop: true, rosters: {}, lineups: { includePitcher: false, away: {}, home: {} }, currentBatter: null, teamNames: {away: '客隊', home: '主隊'} };
-  let currentEditingTeam = null;
-  let currentEditingLibTeamId = null; 
-
-  if (gameId || urlParams.has('legacy')) {
-      document.getElementById('home-view').style.display = 'none';
-      document.getElementById('controller-view').style.display = 'block';
-      document.getElementById('top-nav').style.display = 'flex';
-      
-      // ✅ 更新上方導覽列的所有連結
-      document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId || 'scoreboard'}`;
-      document.getElementById('nav-lineup-away-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=away`;
-      document.getElementById('nav-lineup-home-link').href = `lineup.html?gameId=${gameId || 'scoreboard'}&team=home`;
-      // ✅ 新增的打序表連結
-      document.getElementById('nav-order-away-link').href = `batting_order.html?gameId=${gameId || 'scoreboard'}&team=away`;
-      document.getElementById('nav-order-home-link').href = `batting_order.html?gameId=${gameId || 'scoreboard'}&team=home`;
-      
-      initController();
-  } else {
-      document.getElementById('home-view').style.display = 'block';
-      document.getElementById('controller-view').style.display = 'none';
-      initHomeView();
-  }
-
-  // ================= 視圖 1: 首頁大廳邏輯 =================
-  function initHomeView() {
-      onValue(ref(db, 'library_teams'), (snapshot) => {
-          const teams = snapshot.val() || {};
-          const listEl = document.getElementById('lib-teams-list');
-          const selAway = document.getElementById('new-game-away');
-          const selHome = document.getElementById('new-game-home');
-          listEl.innerHTML = ''; selAway.innerHTML = '<option value="">-- 選擇客隊 --</option>'; selHome.innerHTML = '<option value="">-- 選擇主隊 --</option>';
-          Object.keys(teams).forEach(id => {
-              const team = teams[id];
-              listEl.innerHTML += `<div class="list-item"><strong>${team.name}</strong><button class="btn-outline" onclick="openLibraryRosterModal('${id}', '${team.name}')">編輯名單</button></div>`;
-              selAway.innerHTML += `<option value="${id}">${team.name}</option>`; selHome.innerHTML += `<option value="${id}">${team.name}</option>`;
-          });
-      });
-      onValue(ref(db, 'games'), (snapshot) => {
-          const games = snapshot.val() || {};
-          const listEl = document.getElementById('games-list');
-          listEl.innerHTML = `<div class="list-item" style="border-left: 4px solid #f39c12;"><div><strong style="color: #f39c12;">舊版預設記分板</strong></div><div><a href="control.html?legacy=true" class="btn-primary" style="text-decoration: none; margin-right: 5px;">進入</a><a href="overlay.html" target="_blank" class="btn-outline">開啟</a></div></div>`;
-          Object.keys(games).forEach(id => {
-              const game = games[id];
-              listEl.innerHTML += `<div class="list-item"><div><strong>${game.title || '未命名'}</strong><div style="font-size: 14px; color: #666; margin-top: 5px;">${game.teams?.away?.name || '客隊'} vs ${game.teams?.home?.name || '主隊'}</div></div><div><a href="control.html?gameId=${id}" class="btn-primary" style="text-decoration: none; margin-right: 5px;">進入</a><a href="overlay.html?gameId=${id}" target="_blank" class="btn-outline">開啟</a></div></div>`;
-          });
-      });
-  }
-  window.createLibraryTeam = () => { const n = document.getElementById('new-lib-team-name').value; if(!n)return alert("請輸入名稱"); set(push(ref(db, 'library_teams')), { name: n, roster: Array(25).fill({ num: '', name: '', H: 0, AB: 0 }) }); document.getElementById('new-lib-team-name').value = ''; };
-  window.openLibraryRosterModal = async (id, name) => { currentEditingLibTeamId = id; document.getElementById('lib-roster-modal-title').innerText = `編輯：${name}`; const s = await get(child(dbRef, `library_teams/${id}/roster`)); const r = s.exists()?s.val():[]; const c = document.getElementById('lib-roster-inputs-container'); c.innerHTML=''; for(let i=0;i<25;i++){ c.innerHTML+=`<div class="lib-roster-row"><input type="number" id="lib-roster-num-${i}" placeholder="背號" value="${r[i]?.num||''}"><input type="text" id="lib-roster-name-${i}" placeholder="姓名" value="${r[i]?.name||''}"></div>`;} document.getElementById('lib-roster-modal').style.display='flex'; };
-  window.saveLibraryRoster = () => { if(!currentEditingLibTeamId)return; let r=[]; for(let i=0;i<25;i++){r.push({num:document.getElementById(`lib-roster-num-${i}`).value, name:document.getElementById(`lib-roster-name-${i}`).value, H:0, AB:0});} update(ref(db, `library_teams/${currentEditingLibTeamId}`), {roster:r}).then(()=>closeModal('lib-roster-modal')); };
-// ==========================================
-  // 🏆 建立新賽事邏輯 (保留載入隊伍名單功能 + 修正網址跳轉)
-  // ==========================================
-  window.createNewGame = async () => {
-      try {
-          const title = document.getElementById('new-game-title').value;
-          const aId = document.getElementById('new-game-away').value;
-          const hId = document.getElementById('new-game-home').value;
-          
-          if (!title || !aId || !hId) return alert('請填寫完整');
-          
-          // 抓取您原本建立好的隊伍資料庫
-          const aData = (await get(child(dbRef, `library_teams/${aId}`))).val();
-          const hData = (await get(child(dbRef, `library_teams/${hId}`))).val();
-          
-          const newId = 'game_' + Date.now();
-          
-          // 等待寫入 Firebase (您原本的寫法非常正確)
-          await set(ref(db, `games/${newId}`), { 
-              title: title, 
-              theme: "modern", // ✅ 補上預設主題風格，避免記分板沒吃到 CSS
-              teams: { away: { name: aData.name, score: 0 }, home: { name: hData.name, score: 0 } }, 
-              rosters: { away: aData.roster || [], home: hData.roster || [] }, 
-              gameInfo: { inning: 1, isTop: true }, 
-              count: { balls: 0, strikes: 0, outs: 0 }, 
-              bases: { first: false, second: false, third: false }, 
-              pitchCount: { away: 0, home: 0 }, 
-              lineups: { includePitcher: false, away: {}, home: {} }, 
-              radarOffset: 0 
-          });
-          
-          // 🟢 唯一關鍵修改：用 window.location.pathname 動態抓取檔名，取代寫死的 control.html
-          window.location.href = window.location.pathname + `?gameId=${newId}`;
-          
-      } catch (error) {
-          console.error("建立賽事發生錯誤:", error);
-          alert("建立賽事失敗，請檢查網路連線或權限設定！");
-      }
-  };
-  // ================= 視圖 2: 轉播控制台邏輯 =================
-  const positions = ["", "P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "PH", "PR"];
-
-  function initController() {
-      const dbUrl = firebaseConfig.databaseURL.replace(/\/$/, ""); 
-      const radarUrl = `${dbUrl}/${basePath}/radar.json`;
-      if(document.getElementById('automate-url-display')) {
-          document.getElementById('automate-url-display').value = radarUrl;
-      }
-
-      onValue(ref(db, basePath), (snapshot) => {
-          const data = snapshot.val();
-          if(!data) return;
-          if(data.title !== undefined) { document.getElementById('title-input').value = data.title; document.getElementById('nav-game-title').innerText = `控制台 - ${data.title}`; }
-          if(data.teams) {
-              localState.teamNames.away = data.teams.away.name || '客隊'; localState.teamNames.home = data.teams.home.name || '主隊';
-              document.getElementById('away-name').value = localState.teamNames.away; document.getElementById('home-name').value = localState.teamNames.home;
-              document.getElementById('away-lineup-title').innerText = localState.teamNames.away; document.getElementById('home-lineup-title').innerText = localState.teamNames.home;
-          }
-          if(data.gameInfo) {
-              localState.isTop = data.gameInfo.isTop; document.getElementById('ctrl-inning').innerText = data.gameInfo.inning;
-              const halfEl = document.getElementById('ctrl-half'); halfEl.innerText = '▲'; halfEl.className = data.gameInfo.isTop ? 'arrow-up' : 'arrow-down';
-          }
-          if(data.bases) {
-              document.getElementById('ctrl-base-1').className = `base-diamond ${data.bases.first ? 'active' : ''}`;
-              document.getElementById('ctrl-base-2').className = `base-diamond ${data.bases.second ? 'active' : ''}`;
-              document.getElementById('ctrl-base-3').className = `base-diamond ${data.bases.third ? 'active' : ''}`;
-          }
-          if(data.count) {
-              for(let i=1;i<=3;i++) document.getElementById(`ctrl-b${i}`).className = `dot ${data.count.balls>=i?'b-active':''}`;
-              for(let i=1;i<=2;i++) document.getElementById(`ctrl-s${i}`).className = `dot ${data.count.strikes>=i?'s-active':''}`;
-              for(let i=1;i<=2;i++) document.getElementById(`ctrl-o${i}`).className = `dot ${data.count.outs>=i?'o-active':''}`;
-          }
-          if(data.pitchCount) { document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0; document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0; }
-          
-          const offset = data.radarOffset || 0;
-          document.getElementById('radar-offset-display').innerText = offset > 0 ? `+${offset}` : offset;
-          document.getElementById('radar-offset-display').style.color = offset !== 0 ? '#e74c3c' : '#2c3e50';
-
-          localState.rosters = data.rosters || {}; localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} }; localState.currentBatter = data.currentBatter || null;
-          document.getElementById('dh-toggle').checked = localState.lineups.includePitcher || false;
-          renderAllLineups(); updateBatterPanelDisplay();
-      });
-  }
-
-  function updateBatterPanelDisplay() {
-      const cb = localState.currentBatter, disp = document.getElementById('result-batter-name'), bdg = document.getElementById('result-team-badge'), inH = document.getElementById('manual-h'), inAB = document.getElementById('manual-ab');
-      if (cb && cb.team && cb.rosterIndex !== -1) {
-          const p = localState.rosters[cb.team]?.[cb.rosterIndex];
-          if (p) { bdg.innerText = localState.teamNames[cb.team]; bdg.style.backgroundColor = cb.team === 'away' ? '#3498db' : '#9b59b6'; disp.innerText = `${p.num} ${p.name}`; disp.style.color = '#2c3e50'; inH.value = p.H || 0; inAB.value = p.AB || 0; return; }
-      }
-      bdg.innerText = "無"; bdg.style.backgroundColor = "#95a5a6"; disp.innerText = "請由上方選擇打者"; disp.style.color = "#888"; inH.value = 0; inAB.value = 0;
-  }
-
-  window.changeRadarOffset = async (delta) => {
-      const snap = await get(child(dbRef, `${basePath}/radarOffset`));
-      const current = snap.exists() ? parseInt(snap.val()) : 0;
-      update(ref(db, basePath), { radarOffset: current + delta });
-  };
-  window.resetRadarOffset = () => update(ref(db, basePath), { radarOffset: 0 });
-
-  window.copyAutomateUrl = () => {
-      const copyText = document.getElementById('automate-url-display');
-      copyText.select();
-      copyText.setSelectionRange(0, 99999); 
-      navigator.clipboard.writeText(copyText.value).then(() => {
-          alert("✅ 已成功複製本場地專屬的 Firebase 測速網址！\n\n請打開負責本場地的 Automate 手機，將此網址貼入 HTTP request 區塊的 Request URL 欄位中。");
-      }).catch(err => {
-          alert("複製失敗，請手動全選並複製框內的網址。");
-      });
-  };
-
-  window.updateSpeed = () => { const s = document.getElementById('speedInput').value; if(s) update(ref(db, `${basePath}/radar`), { speed: s }); document.getElementById('speedInput').value = ''; };
-
-  window.setBatting = (team, idx) => update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(idx) } });
-  window.saveManualStats = () => { if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請設定打者'); const { team, rosterIndex } = localState.currentBatter; update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: parseInt(document.getElementById('manual-h').value)||0, AB: parseInt(document.getElementById('manual-ab').value)||0 }); };
-  
-  window.recordResult = async (type) => {
-      if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請先設定目前的打者');
-      const { team, rosterIndex } = localState.currentBatter; 
-      const snap = await get(child(dbRef, `${basePath}/rosters/${team}/${rosterIndex}`)); 
-      if (!snap.exists()) return;
-      
-      let p = snap.val(); let h = parseInt(p.H)||0; let ab = parseInt(p.AB)||0;
-      
-      if (['1B','2B','3B','HR'].includes(type)) { h++; ab++; }
-      if (['SO','GO','FO','N.O','GDP','FC','E'].includes(type)) ab++;
-      await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
-      
-      if (type !== 'SB') {
-          resetCount();
-          
-          const batters = localState.lineups[team]?.batters || {};
-          let currentIndex = -1;
-          
-          for (let i = 0; i < 9; i++) {
-              if (batters[i] && parseInt(batters[i].rosterIndex) === parseInt(rosterIndex)) {
-                  currentIndex = i;
-                  break;
-              }
-          }
-          
-          if (currentIndex !== -1) {
-              let nextIndex = (currentIndex + 1) % 9;
-              for (let loop = 0; loop < 9; loop++) {
-                  if (batters[nextIndex] && batters[nextIndex].rosterIndex !== undefined && batters[nextIndex].rosterIndex != -1) {
-                      update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(batters[nextIndex].rosterIndex) } });
-                      break;
-                  }
-                  nextIndex = (nextIndex + 1) % 9;
-              }
-          }
-      }
-  };
-
-  function renderAllLineups() {
-      ['away', 'home'].forEach(team => {
-          const roster = localState.rosters[team] || {}; const lineup = localState.lineups[team] || {};
-          let pName = "--", pNum = "--"; if (lineup.pitcherIndex !== undefined && roster[lineup.pitcherIndex]) { pName = roster[lineup.pitcherIndex].name || "(未命名)"; pNum = roster[lineup.pitcherIndex].num || "-"; }
-          document.getElementById(`${team}-p-name`).innerText = pName; document.getElementById(`${team}-p-num`).innerText = pNum;
-          const tbody = document.getElementById(`${team}-lineup-tbody`); tbody.innerHTML = ''; const batters = lineup.batters || {};
-          const usedRosterIndices = new Set(); for(let i=0; i<9; i++) if (batters[i] && batters[i].rosterIndex !== undefined && batters[i].rosterIndex != -1) usedRosterIndices.add(parseInt(batters[i].rosterIndex));
-
-          for(let index = 0; index < 9; index++) {
-              const batter = batters[index] || { rosterIndex: -1, pos: '' }; const tr = document.createElement('tr'); tr.className = 'draggable-row'; tr.draggable = true; tr.dataset.team = team; tr.dataset.index = index;
-              tr.addEventListener('dragstart', handleDragStart); tr.addEventListener('dragover', handleDragOver); tr.addEventListener('dragleave', handleDragLeave); tr.addEventListener('drop', handleDrop);
-              let rosterOptions = `<option value="-1">-- 空缺 --</option>`;
-              for (let rIdx = 0; rIdx < 25; rIdx++) if (roster[rIdx] && (roster[rIdx].name || roster[rIdx].num)) if (!(usedRosterIndices.has(rIdx) && batter.rosterIndex != rIdx)) rosterOptions += `<option value="${rIdx}" ${batter.rosterIndex == rIdx ? 'selected' : ''}>${roster[rIdx].num} ${roster[rIdx].name}</option>`;
-              let posOptions = ''; positions.forEach(pos => posOptions += `<option value="${pos}" ${batter.pos === pos ? 'selected' : ''}>${pos}</option>`);
-              const isCB = (localState.currentBatter?.team === team && localState.currentBatter?.rosterIndex == batter.rosterIndex && batter.rosterIndex != -1);
-              tr.innerHTML = `<td style="font-weight: bold; text-align: center;">${index + 1}</td><td><select class="player-select" onchange="updateLineupPlayer('${team}', ${index}, this.value)">${rosterOptions}</select></td><td><select class="pos-select" onchange="updateLineupPos('${team}', ${index}, this.value)">${posOptions}</select></td><td class="drag-handle" title="按住拖曳">⇄</td><td style="text-align: center;"><button class="btn-set-batter ${isCB?'active':''}" onclick="setBatting('${team}', ${batter.rosterIndex})" ${batter.rosterIndex == -1 ? 'disabled' : ''}>${isCB?'打擊中':'打擊 🏏'}</button></td>`;
-              tbody.appendChild(tr);
-          }
-      });
-  }
-
-  window.updatePitchCount = async (team, value) => { const s = await get(child(dbRef, `${basePath}/pitchCount/${team}`)); update(ref(db, `${basePath}/pitchCount`), { [team]: Math.max(0, (s.exists() ? s.val() : 0) + value) }); };
-  window.resetPitchCount = (team) => update(ref(db, `${basePath}/pitchCount`), { [team]: 0 });
-  window.updateGlobalDH = (isChecked) => {
-      update(ref(db, `${basePath}/lineups`), { includePitcher: isChecked });
-      ['away', 'home'].forEach(team => {
-          const lineup = localState.lineups[team] || {}; const pIdx = lineup.pitcherIndex !== undefined ? lineup.pitcherIndex : -1;
-          let batters = []; for(let i=0; i<9; i++) batters.push(lineup.batters?.[i] || { rosterIndex: -1, pos: '' }); let changed = false;
-          if (!isChecked) { for (let i=0; i<9; i++) if ((pIdx !== -1 && batters[i].rosterIndex == pIdx) || batters[i].pos === 'P') { batters[i] = { rosterIndex: -1, pos: '' }; changed = true; } } 
-          else if (pIdx !== -1) {
-              let alreadyIn = false, emptyIdx = -1, dhIdx = -1;
-              for (let i=0; i<9; i++) { if (batters[i].rosterIndex == pIdx) alreadyIn = true; if (batters[i].pos === 'DH') dhIdx = i; if (batters[i].rosterIndex == -1 && emptyIdx === -1) emptyIdx = i; }
-              if (!alreadyIn) { let tIdx = dhIdx !== -1 ? dhIdx : emptyIdx; if (tIdx !== -1) { batters[tIdx] = { rosterIndex: pIdx, pos: 'P' }; changed = true; } } 
-              else { for (let i=0; i<9; i++) if (batters[i].rosterIndex == pIdx && batters[i].pos !== 'P') { batters[i].pos = 'P'; changed = true; } }
-          }
-          if (changed) set(ref(db, `${basePath}/lineups/${team}/batters`), batters);
-      });
-  };
-
-  window.openRosterModal = (team) => { currentEditingTeam = team; document.getElementById('roster-modal-title').innerText = team === 'away' ? '編輯客隊名單' : '編輯主隊名單'; const c = document.getElementById('roster-inputs-container'); c.innerHTML = ''; const r = localState.rosters[team] || {}; for (let i=0; i<25; i++) { const p = r[i] || { num: '', name: '', H: 0, AB: 0 }; c.innerHTML += `<div class="roster-edit-row"><input type="number" id="roster-num-${i}" placeholder="背號" value="${p.num}"><input type="text" id="roster-name-${i}" placeholder="姓名" value="${p.name}"><input type="number" id="roster-h-${i}" value="${p.H || 0}" min="0"><input type="number" id="roster-ab-${i}" value="${p.AB || 0}" min="0"></div>`; } document.getElementById('roster-modal').style.display = 'flex'; };
-  window.saveRoster = () => { if(!currentEditingTeam) return; let n = []; for (let i=0; i<25; i++) n.push({ num: document.getElementById(`roster-num-${i}`).value, name: document.getElementById(`roster-name-${i}`).value, H: parseInt(document.getElementById(`roster-h-${i}`).value)||0, AB: parseInt(document.getElementById(`roster-ab-${i}`).value)||0 }); set(ref(db, `${basePath}/rosters/${currentEditingTeam}`), n).then(() => closeModal('roster-modal')); };
-  window.openPitcherModal = (team) => { currentEditingTeam = team; const s = document.getElementById('pitcher-select'); s.innerHTML = '<option value="-1">-- 選擇投手 --</option>'; const r = localState.rosters[team] || {}; const cp = localState.lineups[team]?.pitcherIndex || -1; for (let i=0; i<25; i++) if (r[i] && (r[i].name || r[i].num)) s.innerHTML += `<option value="${i}" ${cp == i ? 'selected' : ''}>${r[i].num} ${r[i].name}</option>`; document.getElementById('pitcher-modal').style.display = 'flex'; };
-  window.savePitcher = () => {
-      if(!currentEditingTeam) return; const pIdx = parseInt(document.getElementById('pitcher-select').value); const t = currentEditingTeam; const incP = document.getElementById('dh-toggle').checked;
-      let up = {}; up[`${basePath}/lineups/${t}/pitcherIndex`] = pIdx; up[`${basePath}/pitchCount/${t}`] = 0;
-      if (incP && pIdx !== -1) {
-          let b = []; for(let i=0; i<9; i++) b.push(localState.lineups[t]?.batters?.[i] || {rosterIndex: -1, pos: ''}); let ch = false;
-          for(let i=0; i<9; i++) if (b[i].pos === 'P') { b[i].rosterIndex = pIdx; ch = true; }
-          if (!ch) for(let i=0; i<9; i++) if (b[i].rosterIndex == -1) { b[i] = { rosterIndex: pIdx, pos: 'P' }; ch = true; break; }
-          if (ch) up[`${basePath}/lineups/${t}/batters`] = b;
-      }
-      update(ref(db), up).then(() => closeModal('pitcher-modal'));
-  };
-
-  let dragSrcEl = null;
-  function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', this.dataset.index); }
-  function handleDragOver(e) { if(e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.classList.add('drag-over'); return false; }
-  function handleDragLeave(e) { this.classList.remove('drag-over'); }
-  function handleDrop(e) { if(e.stopPropagation) e.stopPropagation(); this.classList.remove('drag-over'); const t = this.dataset.team, src = parseInt(dragSrcEl.dataset.index), dest = parseInt(this.dataset.index); if (dragSrcEl !== this && dragSrcEl.dataset.team === t) { let b = []; for(let i=0; i<9; i++) b.push(localState.lineups[t]?.batters?.[i] || { rosterIndex: -1, pos: '' }); const [m] = b.splice(src, 1); b.splice(dest, 0, m); set(ref(db, `${basePath}/lineups/${t}/batters`), b); } return false; }
-
-  window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
-  window.updateLineupPlayer = (t, bIdx, rIdx) => { let up = { rosterIndex: parseInt(rIdx) }; if (parseInt(rIdx) !== -1 && parseInt(rIdx) === localState.lineups[t]?.pitcherIndex) up.pos = 'P'; update(ref(db, `${basePath}/lineups/${t}/batters/${bIdx}`), up); };
-  window.updateLineupPos = (t, bIdx, p) => update(ref(db, `${basePath}/lineups/${t}/batters/${bIdx}`), { pos: p });
-
-  window.updateTitle = () => update(ref(db, basePath), { title: document.getElementById('title-input').value });
-  window.updateScore = async (t, v) => { const s = await get(child(dbRef, `${basePath}/teams/${t}/score`)); update(ref(db, `${basePath}/teams/${t}`), { score: Math.max(0, (s.exists()?s.val():0)+v) }); };
-  window.updateTeam = (t) => update(ref(db, `${basePath}/teams/${t}`), { name: document.getElementById(`${t}-name`).value });
-  window.stepInning = async (d) => { const i = await get(child(dbRef, `${basePath}/gameInfo/inning`)); const t = await get(child(dbRef, `${basePath}/gameInfo/isTop`)); let inng = i.exists()?i.val():1, isT = t.exists()?t.val():true; if(d==='next'){ if(isT) isT=false; else{ isT=true; inng++; } } else if(d==='prev'){ if(!isT) isT=true; else if(inng>1){ isT=false; inng--; } } update(ref(db, `${basePath}/gameInfo`), { inning: inng, isTop: isT }); };
-  window.updateCount = async (type, v) => {
-      const s = await get(child(dbRef, `${basePath}/count/${type}`)); let n = (s.exists() ? s.val() : 0) + v;
-      if(type==='balls' && n>3) n=0; if((type==='strikes' || type==='outs') && n>2) n=0;
-      let up = {}; up[`${basePath}/count/${type}`] = n;
-      if (v > 0) { const pT = localState.isTop ? 'home' : 'away'; const pc = await get(child(dbRef, `${basePath}/pitchCount/${pT}`)); up[`${basePath}/pitchCount/${pT}`] = (pc.exists() ? pc.val() : 0) + 1; }
-      update(ref(db), up);
-  };
-  window.resetCount = () => update(ref(db, `${basePath}/count`), { balls: 0, strikes: 0 });
-  window.toggleBase = async (b) => { const s = await get(child(dbRef, `${basePath}/bases/${b}`)); update(ref(db, `${basePath}/bases`), { [b]: !(s.exists()?s.val():false) }); };
-
-// ==========================================
-  // 🎨 轉播包裝風格選擇邏輯 (獨立擴充模組)
-  // ==========================================
-  window.selectTheme = function(themeId) {
-      if (typeof gameId === 'undefined' || !gameId) {
-          alert("請先進入賽事後，再切換風格！");
-          return;
-      }
-      // 將 theme 標籤寫入 Firebase
-      update(ref(db, `games/${gameId}`), { theme: themeId })
-          .catch(err => alert("主題切換失敗：" + err.message));
-  };
-
-  // 獨立監聽 Theme 變化，完全不影響您原本的 onValue 邏輯
-  //function listenThemeChanges() {
-      onValue(ref(db, `games/${gameId}/theme`), (snapshot) => {
-          const currentTheme = snapshot.val() || 'modern';
-          
-          // 更新 UI 卡片選中狀態
-          document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
-          const selectedEl = document.getElementById(`theme-${currentTheme}`);
-          if (selectedEl) selectedEl.classList.add('selected');
-      });
-
-// ==========================================
-  // 🎨 轉播包裝風格選擇邏輯 (獨立擴充模組)
-  // ==========================================
-  window.selectTheme = function(themeId) {
-      if (typeof gameId === 'undefined' || !gameId) {
-          alert("請先進入賽事後，再切換風格！");
-          return;
-      }
-      // 將 theme 標籤寫入 Firebase
-      update(ref(db, `games/${gameId}`), { theme: themeId })
-          .catch(err => alert("主題切換失敗：" + err.message));
-  };
-
-  // 獨立監聽 Theme 變化，完全不影響您原本的 onValue 邏輯
-  function listenThemeChanges() {
-      onValue(ref(db, `games/${gameId}/theme`), (snapshot) => {
-          const currentTheme = snapshot.val() || 'modern';
-          
-          // 更新 UI 卡片選中狀態
-          document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
-          const selectedEl = document.getElementById(`theme-${currentTheme}`);
-          if (selectedEl) selectedEl.classList.add('selected');
-      });
-  }
-
-  // 設定一個智慧定時器，等待您點擊「進入賽事」取得 gameId 後，自動啟動風格監聽
-  const themeCheckInterval = setInterval(() => {
-      if (typeof gameId !== 'undefined' && gameId) {
-          listenThemeChanges();
-          clearInterval(themeCheckInterval); // 啟動後關閉定時器
-      }
-  }, 1000);
-
-// ==========================================
-  // ⚡ 1. 將變數宣告移至安全區 (解決尚未初始化錯誤)
-  // ==========================================
+  let gameId = urlParams.get('gameId') || null; // 從網址抓取 ID
   let currentSpeedOffset = 0;
 
- window.updateSpeedUrl = function() {
-      const speedInput = document.getElementById('speed-url-result');
-      if (!speedInput) return;
-      
-      // 不管這份檔案叫什麼名字，直接把最後的檔名替換成 speed_only.html
-      const currentUrl = window.location.href.split('?')[0];
-      const baseUrl = currentUrl.replace(/[^\/]+$/, 'speed_only.html');
-      
-      speedInput.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
-  };
-
- // 🔒 權限監聽與畫面狀態切換 (完美修正版)
+  // ==========================================
+  // 🔒 權限與畫面管理中心 (解決跳轉與卡死問題)
+  // ==========================================
   onAuthStateChanged(auth, (user) => {
       const loginView = document.getElementById('login-view');
       const homeView = document.getElementById('home-view');
       const controllerView = document.getElementById('controller-view');
       const topNav = document.getElementById('top-nav');
-      
-      // 核心修正：每次監聽觸發時，都要重新讀取網址列，確保 gameId 還在
-      const urlParams = new URLSearchParams(window.location.search);
-      const activeGameId = urlParams.get('gameId');
 
       if (user) {
           // ✅ 已登入：隱藏登入介面
           if (loginView) loginView.style.display = 'none';
 
-          if (activeGameId) {
-              // 1. 進入賽事控制模式
-              gameId = activeGameId; // 賦值給全域變數供後續使用
+          if (gameId) {
+              // A. 顯示賽事控制面板
               if (homeView) homeView.style.display = 'none';
               if (controllerView) controllerView.style.display = 'block';
-              if (topNav) topNav.style.display = 'flex';
-
-              // 更新導覽列文字
-              const navTitle = document.getElementById('nav-game-title');
-              if (navTitle) navTitle.innerText = `賽事: ${gameId}`;
-              
-              // 執行資料載入
+              if (topNav) {
+                  topNav.style.display = 'flex';
+                  document.getElementById('nav-game-title').innerText = `賽事: ${gameId}`;
+                  // 動態更新導覽列連結
+                  document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId}`;
+              }
+              // 執行資料監聽與載入
+              listenThemeChanges();
               if (typeof window.loadGameData === 'function') window.loadGameData();
-              if (typeof window.listenThemeChanges === 'function') window.listenThemeChanges();
           } else {
-              // 2. 進入大廳模式 (網址沒帶參數)
+              // B. 顯示賽事大廳
               if (homeView) homeView.style.display = 'block';
               if (controllerView) controllerView.style.display = 'none';
               if (topNav) topNav.style.display = 'none';
-
-              // 載入大廳列表
+              
+              // 載入大廳資料
               if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
               if (typeof window.loadTeams === 'function') window.loadTeams();
-              
-              // 初始化球速網址
-              setTimeout(updateSpeedUrl, 500);
+              setTimeout(window.updateSpeedUrl, 500);
           }
       } else {
-          // ❌ 未登入：只顯示登入框，【絕對不要】操作 window.location 或 history
+          // ❌ 未登入：強制鎖定畫面，不跳轉
           if (loginView) loginView.style.display = 'flex';
           if (homeView) homeView.style.display = 'none';
           if (controllerView) controllerView.style.display = 'none';
@@ -907,41 +543,50 @@
   });
 
   // ==========================================
-  // 🔑 3. 登入、登出與按鈕綁定
+  // 🕹️ 控制台功能函數 (確保連結到 Firebase)
   // ==========================================
-  window.loginSystem = function() {
-      const email = document.getElementById('login-email').value;
-      const pwd = document.getElementById('login-password').value;
-      signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("登入失敗：帳號或密碼錯誤"));
+  window.loginSystem = (email, pwd) => signInWithEmailAndPassword(auth, email, pwd).catch(e => alert("登入失敗"));
+  window.logoutSystem = () => signOut(auth).then(() => window.location.href = window.location.pathname);
+  
+  window.connectGame = () => {
+      const id = document.getElementById('game-id-input').value.trim();
+      if (id) window.location.href = window.location.pathname + `?gameId=${id}`;
   };
 
-window.logoutSystem = function() {
-      if (confirm("確定要登出系統嗎？")) {
-          signOut(auth).then(() => {
-              // 登出後，清空網址參數並重新載入當前檔案
-              window.location.href = window.location.pathname;
-          });
-      }
+  // 獨立球速網址產生器
+  window.updateSpeedUrl = () => {
+      const input = document.getElementById('speed-url-result');
+      if (!input) return;
+      const baseUrl = window.location.href.split('?')[0].replace(/[^\/]+$/, 'speed_only.html');
+      input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
   };
 
-  // 綁定球速工具按鈕
+  // 萬用更新函數 (分數、BSO 等)
+  window.updateScore = (team, val) => {
+      if(!gameId) return;
+      const scoreRef = ref(db, `games/${gameId}/teams/${team}/score`);
+      get(scoreRef).then(s => update(ref(db, `games/${gameId}/teams/${team}`), { score: Math.max(0, (s.val()||0) + val) }));
+  };
+
+  // 風格切換
+  window.selectTheme = (themeId) => update(ref(db, `games/${gameId}`), { theme: themeId });
+
+  function listenThemeChanges() {
+      onValue(ref(db, `games/${gameId}/theme`), (s) => {
+          const theme = s.val() || 'modern';
+          document.querySelectorAll('.style-card').forEach(el => el.classList.remove('selected'));
+          const target = document.getElementById(`theme-${theme}`);
+          if (target) target.classList.add('selected');
+      });
+  }
+
+  // 球速 Offset 控制
   document.addEventListener('click', (e) => {
-      if (e.target.id === 'btn-offset-plus') {
-          currentSpeedOffset++;
-          document.getElementById('display-offset').innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          window.updateSpeedUrl();
-      }
-      if (e.target.id === 'btn-offset-minus') {
-          currentSpeedOffset--;
-          document.getElementById('display-offset').innerText = currentSpeedOffset > 0 ? `+${currentSpeedOffset}` : currentSpeedOffset;
-          window.updateSpeedUrl();
-      }
-      if (e.target.id === 'btn-copy-speed') {
-          const input = document.getElementById('speed-url-result');
-          if (input) {
-              input.select();
-              navigator.clipboard.writeText(input.value).then(() => alert("網址已複製！"));
-          }
+      if (e.target.id === 'btn-offset-plus') { currentSpeedOffset++; document.getElementById('display-offset').innerText = currentSpeedOffset; window.updateSpeedUrl(); }
+      if (e.target.id === 'btn-offset-minus') { currentSpeedOffset--; document.getElementById('display-offset').innerText = currentSpeedOffset; window.updateSpeedUrl(); }
+      if (e.target.id === 'btn-copy-speed') { 
+          const el = document.getElementById('speed-url-result'); 
+          el.select(); navigator.clipboard.writeText(el.value).then(() => alert("網址已複製")); 
       }
   });
 </script>
