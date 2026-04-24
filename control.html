@@ -156,10 +156,15 @@
     </div>
 
     <div class="card card-header-teal">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-        <h3 style="margin:0;">🏆 <span id="control-game-title">賽事標題載入中...</span></h3>
-        <button class="btn-success btn-sm">更新標題</button>
-      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin:0;">🏆 <span id="control-game-title">賽事標題載入中...</span></h3>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-outline btn-sm" onclick="window.openOverlay('overlay')">BSO 面板</button>
+            <button class="btn-outline btn-sm" onclick="window.openOverlay('lineup')">Lineup 介紹</button>
+            <button class="btn-outline btn-sm" onclick="window.openOverlay('defense')">守備配置</button>
+            <button class="btn-outline btn-sm" onclick="window.openOverlay('batter')">打擊數據</button>
+       </div>
+     </div>
 
       <div class="control-top-panel">
         <div class="score-box">
@@ -515,6 +520,76 @@
       else if (isTop && localGameState.state.inning.top && num > 1) { num--; }
       update(ref(db, `games/${currentGameId}/state/inning`), { top: isTop, number: num });
     };
-  </script>
+  
+// 1. 實現 Overlay 預覽功能 
+    window.openOverlay = (type) => {
+        const url = `${type}.html?gameId=${currentGameId}`;
+        window.open(url, '_blank', 'width=1280,height=720');
+    };
+
+    // 2. 投手球數即時連動 
+    window.updatePitchCount = (team, amount) => {
+        const currentCount = localGameState.state.pitchCount?.[team] || 0;
+        const newCount = Math.max(0, currentCount + amount);
+        update(ref(db, `games/${currentGameId}/state/pitchCount`), { [team]: newCount });
+    };
+
+    // 3. 打者數據追蹤功能 
+    window.recordAtBat = (resultType) => {
+        // 範例：若為三振，自動增加出局數並重設 BSO 
+        if(resultType === 'SO') {
+            window.addBSO('o'); 
+            window.resetBSO(); 
+        }
+        // 更新最後一個 Play 紀錄至 Firebase，讓 Overlay 同步顯示 
+        update(ref(db, `games/${currentGameId}/state/lastPlay`), { 
+            result: resultType,
+            timestamp: Date.now()
+        });
+    };
+
+    // 4. 初始化拖拽排序功能 
+    // 提示：此函式應在 initGameController 內或頁面 DOM 載入後呼叫 
+    window.initSortable = (elementId) => {
+        const list = document.getElementById(elementId);
+        if (!list) return;
+        // ... 此處放入之前提供的 HTML5 Drag & Drop 監聽邏輯 ...
+    };
+
+    // 5. 球員編輯儲存邏輯 (平板手動修改) [cite: 18]
+    window.savePlayer = () => {
+        const name = document.getElementById('edit-name').value;
+        const number = document.getElementById('edit-number').value;
+        const pos = document.getElementById('edit-pos').value;
+        const hand = document.getElementById('edit-hand').value;
+        
+        // 將修改後的資訊更新回 Firebase 的隊伍名單中 [cite: 18]
+        // 具體路徑視您的資料結構而定，例如：`teams/${teamId}/roster/${playerId}`
+        console.log("儲存球員:", {name, number, pos, hand});
+        document.getElementById('player-modal').style.display = 'none';
+    };
+
+
+</script>
+
+//球員編輯彈窗（Modal）
+<div id="player-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:30px; border-radius:12px; box-shadow:0 0 50px rgba(0,0,0,0.5); z-index:1000; width:320px;">
+  <h4>編輯球員資訊</h4>
+  <input type="text" id="edit-name" placeholder="姓名" style="width:100%; margin-bottom:10px;">
+  <input type="number" id="edit-number" placeholder="背號" style="width:100%; margin-bottom:10px;">
+  <select id="edit-pos" style="width:100%; margin-bottom:10px;">
+    <option value="P">P (投手)</option><option value="C">C (捕手)</option>
+    <option value="1B">1B</option><option value="2B">2B</option>
+    <option value="3B">3B</option><option value="SS">SS</option>
+    <option value="LF">LF</option><option value="CF">CF</option><option value="RF">RF</option>
+    <option value="DH">DH</option>
+  </select>
+  <div style="margin-bottom:10px;">
+    慣用手: <select id="edit-hand"><option value="R">右打/右投</option><option value="L">左打/左投</option></select>
+  </div>
+  <button class="btn-primary" style="width:100%;" onclick="window.savePlayer()">儲存資訊</button>
+  <button onclick="document.getElementById('player-modal').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:gray;">取消</button>
+</div>
+
 </body>
 </html>
