@@ -855,49 +855,54 @@
       speedInput.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
   };
 
- // 🔒 權限監聽與畫面狀態切換 (修復跳回大廳 Bug 版)
+ // 🔒 權限監聽與畫面狀態切換 (完美修正版)
   onAuthStateChanged(auth, (user) => {
       const loginView = document.getElementById('login-view');
       const homeView = document.getElementById('home-view');
       const controllerView = document.getElementById('controller-view');
       const topNav = document.getElementById('top-nav');
       
-      // 核心修正：每次監聽觸發時，都重新抓取最新的網址參數
-      const currentParams = new URLSearchParams(window.location.search);
-      const activeGameId = currentParams.get('gameId');
+      // 核心修正：每次監聽觸發時，都要重新讀取網址列，確保 gameId 還在
+      const urlParams = new URLSearchParams(window.location.search);
+      const activeGameId = urlParams.get('gameId');
 
       if (user) {
-          // ✅ 已登入
+          // ✅ 已登入：隱藏登入介面
           if (loginView) loginView.style.display = 'none';
 
           if (activeGameId) {
-              // 進入賽事控制模式
-              gameId = activeGameId; // 賦值給全域變數
+              // 1. 進入賽事控制模式
+              gameId = activeGameId; // 賦值給全域變數供後續使用
               if (homeView) homeView.style.display = 'none';
               if (controllerView) controllerView.style.display = 'block';
               if (topNav) topNav.style.display = 'flex';
+
+              // 更新導覽列文字
+              const navTitle = document.getElementById('nav-game-title');
+              if (navTitle) navTitle.innerText = `賽事: ${gameId}`;
               
+              // 執行資料載入
               if (typeof window.loadGameData === 'function') window.loadGameData();
+              if (typeof window.listenThemeChanges === 'function') window.listenThemeChanges();
           } else {
-              // 進入大廳模式
+              // 2. 進入大廳模式 (網址沒帶參數)
               if (homeView) homeView.style.display = 'block';
               if (controllerView) controllerView.style.display = 'none';
               if (topNav) topNav.style.display = 'none';
 
+              // 載入大廳列表
               if (typeof window.loadRecentGames === 'function') window.loadRecentGames();
               if (typeof window.loadTeams === 'function') window.loadTeams();
               
+              // 初始化球速網址
               setTimeout(updateSpeedUrl, 500);
           }
       } else {
-          // ❌ 未登入：只顯示登入框，保持網址不動！
+          // ❌ 未登入：只顯示登入框，【絕對不要】操作 window.location 或 history
           if (loginView) loginView.style.display = 'flex';
           if (homeView) homeView.style.display = 'none';
           if (controllerView) controllerView.style.display = 'none';
           if (topNav) topNav.style.display = 'none';
-          
-          // 注意：這裡我們刪除了原有的清空網址 (replaceState) 邏輯，
-          // 這樣登入成功後，網址上的 gameId 才會被保留並正確讀取。
       }
   });
 
