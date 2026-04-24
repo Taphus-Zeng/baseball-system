@@ -548,11 +548,41 @@
   // 🔑 基礎功能 (解決 "is not defined" 錯誤)
   // ==========================================
   
-  // 登入功能 (強制掛載到 window 讓按鈕看得到)
+// ==========================================
+  // 🔑 登入功能 (加入空白防護與詳細錯誤提示)
+  // ==========================================
   window.loginSystem = function() {
-    const email = document.getElementById('login-email').value;
-    const pwd = document.getElementById('login-password').value;
-    signInWithEmailAndPassword(auth, email, pwd).catch(err => alert("帳號密碼錯誤"));
+    const email = document.getElementById('login-email').value.trim();
+    const pwd = document.getElementById('login-password').value.trim();
+
+    // 1. 攔截空白輸入，避免觸發 400 錯誤
+    if (!email || !pwd) {
+      alert("⚠️ 請輸入完整的電子郵件與密碼！");
+      return;
+    }
+
+    // 2. 送出驗證並捕捉精準的 Firebase 錯誤碼
+    signInWithEmailAndPassword(auth, email, pwd)
+      .catch((error) => {
+        console.error("登入錯誤細節:", error.code, error.message);
+        
+        // 根據 Firebase 的錯誤碼給予對應的中文提示
+        switch (error.code) {
+          case 'auth/invalid-email':
+            alert("❌ 登入失敗：電子郵件格式不正確 (需包含 @)。");
+            break;
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            alert("❌ 登入失敗：帳號不存在或密碼錯誤。");
+            break;
+          case 'auth/too-many-requests':
+            alert("❌ 登入失敗：嘗試次數過多，請稍後再試。");
+            break;
+          default:
+            alert("❌ 登入失敗：發生未知錯誤 (" + error.code + ")");
+        }
+      });
   };
 
   // 登出功能
