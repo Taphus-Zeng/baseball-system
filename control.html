@@ -635,43 +635,75 @@
   };
 
   // ==========================================
-  // 🏠 2. 大廳監聽：自動帶入舊有資料
+  // 🏠 2. 大廳監聽：自動同步賽事列表與隊伍選單
   // ==========================================
   function startLobbyListeners() {
-    // 監聽賽事列表
+    // --- A. 監聽賽事列表 ---
     onValue(ref(db, 'games'), (snapshot) => {
       const container = document.getElementById('recent-games-list');
       if (!container) return;
+
       const games = snapshot.val();
-      container.innerHTML = games ? '' : '<p>尚無賽事</p>';
+      container.innerHTML = games ? '' : '<p style="color:#888;">尚無賽事記錄</p>';
+
       if (games) {
+        // 由新到舊排序
         Object.keys(games).reverse().forEach(id => {
           const g = games[id];
-          container.innerHTML += `
-            <div class="game-card">
-              <strong>${g.title}</strong>
-              <button onclick="location.href=window.location.pathname+'?gameId=${id}'">進入控制</button>
-              <button onclick="window.deleteGame('${id}')" class="btn-red">刪除</button>
+          const div = document.createElement('div');
+          div.className = 'game-card';
+          // 增加「進入控制」、「BSO畫面」與「刪除」三個核心按鈕
+          div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
+              <strong style="color:#101451; font-size:18px;">${g.title || '未命名賽事'}</strong>
+              <div style="display:flex; gap:8px;">
+                <button onclick="location.href=window.location.pathname+'?gameId=${id}'" class="btn-blue">進入控制</button>
+                <button onclick="window.openOverlay('${id}')" class="btn-green">BSO畫面</button>
+                <button onclick="window.deleteGame('${id}', '${g.title || id}')" class="btn-red">刪除</button>
+              </div>
             </div>`;
+          container.appendChild(div);
         });
       }
     });
 
-    // 監聽隊伍列表
+    // --- B. 監聽隊伍列表 (同步更新大廳清單與下拉選單) ---
     onValue(ref(db, 'library_teams'), (snapshot) => {
-      const container = document.getElementById('teams-list');
-      if (!container) return;
+      const teamListContainer = document.getElementById('teams-list');
+      const awaySelect = document.getElementById('new-game-away');
+      const homeSelect = document.getElementById('new-game-home');
+
+      // 每次更新前先初始化清單與選單
+      if (teamListContainer) teamListContainer.innerHTML = '';
+      if (awaySelect) awaySelect.innerHTML = '<option value="">選擇客隊</option>';
+      if (homeSelect) homeSelect.innerHTML = '<option value="">選擇主隊</option>';
+
       const teams = snapshot.val();
-      container.innerHTML = teams ? '' : '<p>請建立首支隊伍</p>';
-      if (teams) {
-        Object.keys(teams).forEach(id => {
-          container.innerHTML += `
-            <div class="team-card">
-              <span>${teams[id].name}</span>
-              <button onclick="window.editRoster('${id}')">編輯名單</button>
-            </div>`;
-        });
+      if (!teams) {
+        if (teamListContainer) teamListContainer.innerHTML = '<p style="color:#888;">請先建立隊伍資料庫</p>';
+        return;
       }
+
+      Object.keys(teams).forEach(id => {
+        const team = teams[id];
+
+        // 1. 更新大廳右側的隊伍清單
+        if (teamListContainer) {
+          const teamDiv = document.createElement('div');
+          teamDiv.className = 'team-card';
+          teamDiv.style = "background:#eee; padding:12px; margin-bottom:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #101451;";
+          teamDiv.innerHTML = `
+            <span><strong>${team.name}</strong> (${(team.roster || []).length}人)</span>
+            <button onclick="window.editRoster('${id}')" style="font-size:12px; padding:5px 10px;">編輯名單</button>
+          `;
+          teamListContainer.appendChild(teamDiv);
+        }
+
+        // 2. 同步更新「建立新賽事」區塊的下拉選單
+        const optionHtml = `<option value="${id}">${team.name}</option>`;
+        if (awaySelect) awaySelect.innerHTML += optionHtml;
+        if (homeSelect) homeSelect.innerHTML += optionHtml;
+      });
     });
   }
 
