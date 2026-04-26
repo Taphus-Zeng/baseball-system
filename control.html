@@ -216,13 +216,16 @@
         import { getDatabase, ref, onValue, update, get, child, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Firebase 配置 (⚠️ 請填入您的金鑰)
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app", 
-            projectId: "YOUR_PROJECT_ID"
-        };
+       // 1. Firebase 配置 (請在此填入您的真實金鑰)
+  const firebaseConfig = {
+  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
+  authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
+  databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "baseball-scoreboard-294d8",
+  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
+  messagingSenderId: "179359096477",
+  appId: "1:179359096477:web:8188f897371651442e7e74"
+  };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
