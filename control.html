@@ -705,6 +705,21 @@
       const baseUrl = window.location.href.split('?')[0].replace(/[^\/]+$/, 'speed_only.html');
       input.value = currentSpeedOffset === 0 ? baseUrl : `${baseUrl}?offset=${currentSpeedOffset}`;
   };
+
+   // 04-25 補上「名單編輯器」區塊
+<div id="roster-editor-view" style="display:none; padding: 20px; max-width: 800px; margin: 0 auto;">
+    <h2 id="edit-team-name" style="color: #101451; border-bottom: 2px solid #101451;">編輯隊伍名單</h2>
+    <p style="color: #666;">請輸入 25 位球員的姓名與背號：</p>
+    
+    <div id="roster-input-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        </div>
+
+    <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd;">
+        <button onclick="window.saveCurrentRoster()" style="background: #27ae60; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">儲存名單並返回大廳</button>
+        <button onclick="location.reload()" style="background: #95a5a6; color: white; padding: 10px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-left: 10px;">取消</button>
+    </div>
+</div>
+
 </script>
 </body>
 </html>
