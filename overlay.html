@@ -2,77 +2,144 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>BSO 疊加畫面 - 專業轉播版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>轉播疊加畫面 (向量超清 + 三層結構版)</title>
     <style>
-        /* 基礎透明與向量縮放設定 */
-        body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; font-family: sans-serif; font-weight: bold; }
+        /* 基礎透明背景與字型 */
+        body { 
+            margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; font-weight: bold; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        /* 容器 */
         #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; }
 
-        /* 記分板主體 */
-        .scoreboard { width: 480px; background: rgba(16, 20, 81, 0.95); color: white; border: 2px solid #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+        .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
         
-        .main-row { display: flex; height: 70px; border-bottom: 1px solid rgba(255,255,255,0.2); }
-        .team-box { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-right: 1px solid rgba(255,255,255,0.2); }
-        .score { font-size: 32px; color: #f1c40f; }
-        .inning-box { width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
+        /* ========================================== */
+        /* 1. 最上方區塊：投手資訊列 */
+        /* ========================================== */
+        .pitcher-row-overlay { background-color: #101451; color: white; height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-bottom: 2px solid white; }
+        .pitcher-info-overlay { display: flex; gap: 15px; align-items: center; }
+        .pitcher-label-overlay { background-color: #FFFF00; color: #000; font-size: 22px; font-weight: 900; padding: 0px 8px; border-radius: 4px; }
+        .pitcher-name-overlay { font-size: 28px; letter-spacing: 1px; }
+        .pitch-stats-group { display: flex; align-items: center; gap: 20px; margin-right: 10px; }
+        .speed-overlay { display: none; align-items: baseline; gap: 5px; background-color: rgba(0, 0, 0, 0.4); padding: 2px 10px; border-radius: 4px; border: 1px solid #FFFF00; }
+        .radar-speed { font-size: 32px; color: #FFFF00; font-style: italic; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .radar-unit { font-size: 16px; color: #fff; font-style: italic; }
+        .pitch-count-group { display: flex; align-items: center; gap: 10px; }
+        .baseball-icon { width: 26px; height: 26px; fill: white; opacity: 0.9; }
+        .pitch-count-num-overlay { font-size: 36px; color: #FFFF00; font-style: italic; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); width: 65px; text-align: right; }
 
-        /* BSO 燈號區 */
-        .status-row { display: flex; padding: 10px 15px; align-items: center; justify-content: space-between; background: #000; }
-        .bso-container { display: flex; gap: 15px; }
-        .bso-item { display: flex; align-items: center; gap: 5px; }
-        .dot { width: 15px; height: 15px; border-radius: 50%; background: #333; border: 1px solid #666; }
+        /* ========================================== */
+        /* 2. 中間區塊：BSO 核心資訊 */
+        /* ========================================== */
+        .title-row { background-color: #101451; color: white; justify-content: center; font-size: 32px; height: 50px; display: flex; align-items: center; letter-spacing: 2px; }
+        .main-grid { display: grid; grid-template-columns: 1fr 140px; grid-template-rows: 70px 70px; border-top: 2px solid white; border-bottom: 2px solid white; }
         
-        /* 燈號顏色 */
-        .dot.active-B { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
-        .dot.active-S { background: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
-        .dot.active-O { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
+        .team-row { display: flex; align-items: center; color: white; font-size: 32px; letter-spacing: 2px; padding-left: 20px; }
+        .team-away { grid-column: 1; grid-row: 1; background-color: #009EDB; border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .team-home { grid-column: 1; grid-row: 2; background-color: #62338A; }
+        .team-name { flex-grow: 1; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 15px; }
+        .team-score { font-size: 54px; text-align: right; margin-right: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
 
-        /* 壘包圖案 */
-        .bases { position: relative; width: 40px; height: 40px; transform: rotate(45deg); margin-right: 10px; }
-        .base { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; }
-        .base.active { background: #f1c40f; }
-        #base1 { top: 0; right: 0; } #base2 { top: 0; left: 0; } #base3 { bottom: 0; left: 0; }
+        .inning-bases-area { grid-column: 2; grid-row: 1 / span 2; background-color: #7B006C; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 2px solid white; }
+        .bases-container { position: relative; width: 80px; height: 80px; margin-bottom: 10px; }
+        .base-diamond { position: absolute; width: 30px; height: 30px; background: white; transform: rotate(45deg); transition: background-color 0.2s; }
+        .base-diamond.active { background-color: #00FF00; } 
+        #base-2 { top: 12px; left: 25px; } #base-3 { top: 37px; left: 0; } #base-1 { top: 37px; left: 50px; }    
+
+        .inning-box { display: flex; align-items: center; gap: 5px; font-size: 38px; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .inning-arrow { color: #FFFF00; font-size: 32px; }
+
+        .count-row { background-color: #101451; color: white; display: flex; justify-content: space-around; align-items: center; height: 50px; font-size: 28px; padding: 0 10px; }
+        .count-group { display: flex; gap: 8px; align-items: center; }
+        .count-label { width: 30px; text-align: right; margin-right: 5px; }
+        .dot { width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; }
+        .dot.b-active { background: #00FF00; } .dot.s-active { background: #FFFF00; } .dot.o-active { background: #FF0000; }
+        .separator { width: 2px; height: 30px; background-color: rgba(255,255,255,0.5); }
+
+        /* ========================================== */
+        /* 3. 最下方區塊：打者資訊列 */
+        /* ========================================== */
+        .player-row { background-color: #EEEEEE; color: #333; height: 55px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-top: 2px solid white; }
+        .player-info { display: flex; gap: 15px; align-items: baseline; }
+        .player-number { font-size: 36px; color: #000; }
+        .player-name { font-size: 28px; color: #000; }
+        .batter-stats-group { display: flex; align-items: center; gap: 15px; }
+        .player-stats { font-size: 26px; font-weight: 900; color: #d35400; font-family: Arial, sans-serif; }
+        
+        .bat-icon { width: 36px; height: 36px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
     </style>
 </head>
 <body>
 
 <div id="scale-wrapper">
     <div class="scoreboard">
-        <div class="main-row">
-            <div class="team-box">
-                <span id="away-name">客隊</span>
-                <span id="away-score" class="score">0</span>
-            </div>
-            <div class="inning-box">
-                <span id="inning-half" style="font-size: 14px; color: #e74c3c;">▲</span>
-                <span id="inning-num" style="font-size: 24px;">1</span>
-            </div>
-            <div class="team-box" style="border-right: none;">
-                <span id="home-score" class="score">0</span>
-                <span id="home-name">主隊</span>
+        
+        <div class="pitcher-row-overlay" id="pitcher-container">
+            <div class="pitcher-info-overlay"><span class="pitcher-label-overlay">P</span><span class="pitcher-name-overlay" id="overlay-pitcher-name">--</span></div>
+            <div class="pitch-stats-group">
+                <div class="speed-overlay" id="radar-container"><span class="radar-speed" id="radar-speed">155</span><span class="radar-unit">km/h</span></div>
+                <div class="pitch-count-group">
+                    <svg class="baseball-icon" viewBox="0 0 512 512"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM124.5 98.4c29.1 39.5 44.5 89.2 41 140.6-3.8 55.4-30.8 106.8-74 138.8-17-29.8-27.5-64.2-27.5-100.8 0-66.2 25.5-126.5 60.5-178.6zm263 0c35 52.1 60.5 112.4 60.5 178.6 0 36.6-10.5 71-27.5 100.8-43.2-32-70.2-83.4-74-138.8-3.5-51.4 11.9-101.1 41-140.6z"/></svg>
+                    <span class="pitch-count-num-overlay" id="overlay-pitch-count">0</span>
+                </div>
             </div>
         </div>
 
-        <div class="status-row">
-            <div class="bso-container">
-                <div class="bso-item"><span>B</span><div id="b-dots" style="display:flex;gap:5px;"></div></div>
-                <div class="bso-item"><span>S</span><div id="s-dots" style="display:flex;gap:5px;"></div></div>
-                <div class="bso-item"><span>O</span><div id="o-dots" style="display:flex;gap:5px;"></div></div>
+        <div class="title-row" id="game-title">等待賽事資料...</div>
+        <div class="main-grid">
+            <div class="team-row team-away"><div class="team-name" id="away-name">客隊</div><div class="team-score" id="away-score">0</div></div>
+            <div class="team-row team-home"><div class="team-name" id="home-name">主隊</div><div class="team-score" id="home-score">0</div></div>
+            <div class="inning-bases-area">
+                <div class="bases-container"><div class="base-diamond" id="base-2"></div><div class="base-diamond" id="base-3"></div><div class="base-diamond" id="base-1"></div></div>
+                <div class="inning-box"><span class="inning-arrow" id="inning-half">▲</span><span id="inning-num">1</span></div>
             </div>
-            <div class="bases">
-                <div id="base2" class="base"></div>
-                <div id="base1" class="base"></div>
-                <div id="base3" class="base"></div>
+        </div>
+        <div class="count-row">
+            <div class="count-group"><span class="count-label">B</span><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
+            <div class="separator"></div>
+            <div class="count-group"><span class="count-label">S</span><div class="dot" id="s1"></div><div class="dot" id="s2"></div></div>
+            <div class="separator"></div>
+            <div class="count-group"><span class="count-label">O</span><div class="dot" id="o1"></div><div class="dot" id="o2"></div></div>
+        </div>
+        
+        <div class="player-row" id="player-container" style="display: none;">
+            <div class="player-info"><div class="player-number" id="player-number">--</div><div class="player-name" id="player-name">--</div></div>
+            <div class="batter-stats-group">
+                <div class="player-stats" id="player-stats">0 / 0</div>
+                
+                <svg class="bat-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(50, 50) rotate(-45) translate(-50, -50)">
+                        <path d="M 6,54 
+                                 C 2,54 2,46 6,46 
+                                 L 8,48 
+                                 L 45,48 
+                                 C 65,48 72,45 82,45 
+                                 L 94,45 
+                                 C 99,45 99,55 94,55 
+                                 L 82,55 
+                                 C 72,55 65,52 45,52 
+                                 L 8,52 
+                                 Z" 
+                              fill="#333333" />
+                    </g>
+                </svg>
+                
             </div>
         </div>
     </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // 1. Firebase 配置 (請在此填入您的真實金鑰)
+    // TODO: 貼上您的 Firebase Config
   const firebaseConfig = {
   apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
   authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
@@ -83,43 +150,111 @@
   appId: "1:179359096477:web:8188f897371651442e7e74"
   };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameId = urlParams.get('gameId');
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  let currentShowingSpeed = ""; 
 
-    if (gameId) {
-        onValue(ref(db, `games/${gameId}`), (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get('gameId');
+  const basePath = gameId ? `games/${gameId}` : 'scoreboard';
 
-            // 更新 UI
-            document.getElementById('away-name').innerText = data.teams.away.name;
-            document.getElementById('home-name').innerText = data.teams.home.name;
-            document.getElementById('away-score').innerText = data.teams.away.score;
-            document.getElementById('home-score').innerText = data.teams.home.score;
-            document.getElementById('inning-num').innerText = data.gameInfo.inning;
-            document.getElementById('inning-half').innerText = data.gameInfo.isTop ? "▲" : "▼";
+  onValue(ref(db, basePath), (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
-            // BSO 燈號渲染
-            renderDots('b-dots', data.count.balls, 3, 'active-B');
-            renderDots('s-dots', data.count.strikes, 2, 'active-S');
-            renderDots('o-dots', data.count.outs, 2, 'active-O');
+      // 自動接收控制台送出的主題風格，並套用到最外層 Body
+      const currentTheme = data.theme || 'modern';
+      document.body.className = `theme-${currentTheme}`;
 
-            // 壘包渲染
-            document.getElementById('base1').className = data.bases.first ? 'base active' : 'base';
-            document.getElementById('base2').className = data.bases.second ? 'base active' : 'base';
-            document.getElementById('base3').className = data.bases.third ? 'base active' : 'base';
-        });
-    }
+      if (data.title !== undefined) document.getElementById('game-title').innerText = data.title;
+      if (data.teams) {
+          document.getElementById('away-name').innerText = data.teams.away.name || '客隊';
+          document.getElementById('away-score').innerText = data.teams.away.score || '0';
+          document.getElementById('home-name').innerText = data.teams.home.name || '主隊';
+          document.getElementById('home-score').innerText = data.teams.home.score || '0';
+      }
 
-    function renderDots(id, count, max, activeClass) {
-        let html = '';
-        for (let i = 0; i < max; i++) {
-            html += `<div class="dot ${i < count ? activeClass : ''}"></div>`;
-        }
-        document.getElementById(id).innerHTML = html;
-    }
+      let isTopGlobal = true;
+      if (data.gameInfo) {
+          isTopGlobal = data.gameInfo.isTop;
+          document.getElementById('inning-num').innerText = data.gameInfo.inning || '1';
+          document.getElementById('inning-half').innerText = isTopGlobal ? '▲' : '▼';
+      }
+
+      if (data.bases) {
+          document.getElementById('base-1').className = `base-diamond ${data.bases.first ? 'active' : ''}`;
+          document.getElementById('base-2').className = `base-diamond ${data.bases.second ? 'active' : ''}`;
+          document.getElementById('base-3').className = `base-diamond ${data.bases.third ? 'active' : ''}`;
+      }
+
+      if (data.count) {
+          for(let i=1; i<=3; i++) document.getElementById(`b${i}`).className = `dot ${data.count.balls >= i ? 'b-active' : ''}`;
+          for(let i=1; i<=2; i++) document.getElementById(`s${i}`).className = `dot ${data.count.strikes >= i ? 's-active' : ''}`;
+          for(let i=1; i<=2; i++) document.getElementById(`o${i}`).className = `dot ${data.count.outs >= i ? 'o-active' : ''}`;
+      }
+
+      const pitchingTeam = isTopGlobal ? 'home' : 'away'; 
+      let pName = "--";
+      if (data.lineups && data.rosters) {
+          const pIdx = data.lineups[pitchingTeam]?.pitcherIndex;
+          if (pIdx !== undefined && pIdx !== -1) pName = data.rosters[pitchingTeam]?.[pIdx]?.name || "(未命名)";
+      }
+      document.getElementById('overlay-pitcher-name').innerText = pName;
+      if (data.pitchCount) document.getElementById('overlay-pitch-count').innerText = data.pitchCount[pitchingTeam] || 0;
+
+      const offset = data.radarOffset ? parseInt(data.radarOffset) : 0;
+      if (data.radar && data.radar.speed && data.radar.speed !== "") {
+          if (data.radar.speed !== currentShowingSpeed) {
+              currentShowingSpeed = data.radar.speed;
+              let rawSpeed = parseInt(data.radar.speed);
+              let finalSpeedText = data.radar.speed; 
+              if (!isNaN(rawSpeed)) finalSpeedText = (rawSpeed + offset).toString();
+              
+              document.getElementById('radar-speed').innerText = finalSpeedText;
+              document.getElementById('radar-container').style.display = 'flex'; 
+              
+              if(window.speedTimeout) clearTimeout(window.speedTimeout);
+              window.speedTimeout = setTimeout(() => {
+                  currentShowingSpeed = ""; 
+                  update(ref(db, `${basePath}/radar`), { speed: "" });
+              }, 3000);
+          }
+      } else {
+          currentShowingSpeed = "";
+          document.getElementById('radar-container').style.display = 'none'; 
+      }
+
+      if (data.currentBatter && data.currentBatter.team && data.currentBatter.rosterIndex !== -1) {
+          const cb = data.currentBatter;
+          const player = data.rosters?.[cb.team]?.[cb.rosterIndex];
+          if (player) {
+              document.getElementById('player-container').style.display = 'flex';
+              document.getElementById('player-number').innerText = player.num || '';
+              document.getElementById('player-name').innerText = player.name || '';
+              document.getElementById('player-stats').innerText = `${player.H || 0} / ${player.AB || 0}`;
+          } else { document.getElementById('player-container').style.display = 'none'; }
+      } else { document.getElementById('player-container').style.display = 'none'; }
+  });
+
+  // 超清向量縮放邏輯
+  function applyScale() {
+      const wrapper = document.getElementById('scale-wrapper');
+      const board = document.querySelector('.scoreboard');
+      
+      const paddingOffset = 40; 
+      const targetW = 460 + paddingOffset;
+      const targetH = (board.offsetHeight || 300) + paddingOffset; 
+      
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      
+      const scale = Math.min(winW / targetW, winH / targetH);
+      wrapper.style.transform = 'none';
+      wrapper.style.zoom = scale;
+  }
+  
+  window.addEventListener('resize', applyScale);
+  setInterval(applyScale, 500);
 </script>
 </body>
 </html>
