@@ -602,6 +602,34 @@
     });
   }
 
+// ==========================================
+  // ⚾ 建立新隊伍功能 (修復 ReferenceError)
+  // ==========================================
+  window.createLibraryTeam = async function() {
+    const name = prompt("請輸入新球隊名稱 (例如: 兄弟象):");
+    if (!name || name.trim() === "") return;
+
+    const newId = 'team_' + Date.now();
+    try {
+      // 寫入 Firebase 資料庫
+      await set(ref(db, `library_teams/${newId}`), {
+        name: name.trim(),
+        roster: [] // 預留空的球員名單，未來可擴充
+      });
+      
+      alert(`✅ 球隊「${name}」建立成功！`);
+      
+      // 建立成功後，重新整理大廳的隊伍列表與下拉選單
+      if (typeof window.loadTeams === 'function') {
+        window.loadTeams();
+      }
+    } catch (error) { 
+      console.error("建立球隊時發生錯誤:", error);
+      alert("❌ 建立球隊失敗: " + error.message); 
+    }
+  };
+
+
   // ==========================================
   // 🎮 2. 賽事控制核心 (解決按鈕失效問題)
   // ==========================================
