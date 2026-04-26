@@ -539,96 +539,110 @@
     }
   });
 
+// ==========================================
+  // ⚾ 1. 球隊管理：建立名稱並跳轉至 25 人名單編輯
   // ==========================================
-  // 🏠 1. 大廳資料讀取邏輯 (解決清單空白問題)
+  window.createLibraryTeam = async function() {
+    const name = prompt("請輸入新球隊名稱:");
+    if (!name || name.trim() === "") return;
+
+    const newId = 'team_' + Date.now();
+    try {
+      // 先在資料庫佔位
+      await set(ref(db, `library_teams/${newId}`), {
+        name: name.trim(),
+        roster: Array(25).fill({ name: "", num: "" }) // 預設 25 個空白名單
+      });
+      
+      // 自動切換到名單編輯模式
+      window.editRoster(newId);
+    } catch (e) { alert("建立失敗: " + e.message); }
+  };
+
+  // 開啟名單編輯器
+  window.editRoster = async function(teamId) {
+    const snapshot = await get(child(dbRef, `library_teams/${teamId}`));
+    const team = snapshot.val();
+    if (!team) return;
+
+    // 切換隱藏大廳，顯示編輯器 (假設您的 HTML 有 roster-editor 容器)
+    document.getElementById('home-view').style.display = 'none';
+    const editor = document.getElementById('roster-editor-view');
+    editor.style.display = 'block';
+    
+    document.getElementById('edit-team-name').innerText = `編輯隊伍: ${team.name}`;
+    
+    // 生成 25 個輸入框
+    const listContainer = document.getElementById('roster-input-list');
+    listContainer.innerHTML = '';
+    const currentRoster = team.roster || [];
+    
+    for (let i = 0; i < 25; i++) {
+        const p = currentRoster[i] || { name: "", num: "" };
+        listContainer.innerHTML += `
+          <div class="player-input-row">
+            <span>${i+1}.</span>
+            <input type="text" placeholder="姓名" value="${p.name}" id="p-name-${i}">
+            <input type="number" placeholder="背號" value="${p.num}" id="p-num-${i}">
+          </div>
+        `;
+    }
+    
+    // 綁定儲存按鈕
+    window.saveCurrentRoster = async () => {
+        const newRoster = [];
+        for (let i = 0; i < 25; i++) {
+            newRoster.push({
+                name: document.getElementById(`p-name-${i}`).value,
+                num: document.getElementById(`p-num-${i}`).value
+            });
+        }
+        await update(ref(db, `library_teams/${teamId}`), { roster: newRoster });
+        alert("名單已更新！");
+        location.reload(); // 回到大廳
+    };
+  };
+
+  // ==========================================
+  // 🏠 2. 大廳監聽：自動帶入舊有資料
   // ==========================================
   function startLobbyListeners() {
     // 監聽賽事列表
     onValue(ref(db, 'games'), (snapshot) => {
       const container = document.getElementById('recent-games-list');
       if (!container) return;
-      container.innerHTML = '';
       const games = snapshot.val();
-      if (!games) return;
-
-      Object.keys(games).reverse().forEach(id => {
-        const g = games[id];
-        const div = document.createElement('div');
-        div.className = 'game-item';
-        // ✅ 加入所有要求的按鈕：進入、開啟 BSO、刪除
-        div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
-            <strong style="color:#101451; font-size:18px;">${g.title || '未命名賽事'}</strong>
-            <div style="display:flex; gap:8px;">
-              <button onclick="location.href=window.location.pathname+'?gameId=${id}'" class="btn-blue">進入控制台</button>
-              <button onclick="window.openOverlay('${id}')" class="btn-green">開啟BSO畫面</button>
-              <button onclick="window.deleteGame('${id}', '${g.title || id}')" class="btn-red">刪除</button>
-            </div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
+      container.innerHTML = games ? '' : '<p>尚無賽事</p>';
+      if (games) {
+        Object.keys(games).reverse().forEach(id => {
+          const g = games[id];
+          container.innerHTML += `
+            <div class="game-card">
+              <strong>${g.title}</strong>
+              <button onclick="location.href=window.location.pathname+'?gameId=${id}'">進入控制</button>
+              <button onclick="window.deleteGame('${id}')" class="btn-red">刪除</button>
+            </div>`;
+        });
+      }
     });
 
     // 監聽隊伍列表
     onValue(ref(db, 'library_teams'), (snapshot) => {
       const container = document.getElementById('teams-list');
-      const awaySel = document.getElementById('new-game-away');
-      const homeSel = document.getElementById('new-game-home');
       if (!container) return;
-
-      container.innerHTML = '';
-      if(awaySel) awaySel.innerHTML = '<option value="">選擇客隊</option>';
-      if(homeSel) homeSel.innerHTML = '<option value="">選擇主隊</option>';
-
       const teams = snapshot.val();
-      if (!teams) return;
-
-      Object.keys(teams).forEach(id => {
-        const t = teams[id];
-        // 更新左側清單 (加入編輯按鈕預留)
-        const teamDiv = document.createElement('div');
-        teamDiv.style = "background:#eee; padding:10px; margin-bottom:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;";
-        teamDiv.innerHTML = `
-          <span><strong>${t.name}</strong> (${(t.roster||[]).length}人)</span>
-          <button onclick="window.editTeam('${id}')" style="font-size:12px; padding:2px 8px;">編輯</button>
-        `;
-        container.appendChild(teamDiv);
-
-        // 更新下拉選單
-        if(awaySel) awaySel.innerHTML += `<option value="${id}">${t.name}</option>`;
-        if(homeSel) homeSel.innerHTML += `<option value="${id}">${t.name}</option>`;
-      });
+      container.innerHTML = teams ? '' : '<p>請建立首支隊伍</p>';
+      if (teams) {
+        Object.keys(teams).forEach(id => {
+          container.innerHTML += `
+            <div class="team-card">
+              <span>${teams[id].name}</span>
+              <button onclick="window.editRoster('${id}')">編輯名單</button>
+            </div>`;
+        });
+      }
     });
   }
-
-// ==========================================
-  // ⚾ 建立新隊伍功能 (修復 ReferenceError)
-  // ==========================================
-  window.createLibraryTeam = async function() {
-    const name = prompt("請輸入新球隊名稱 (例如: 兄弟象):");
-    if (!name || name.trim() === "") return;
-
-    const newId = 'team_' + Date.now();
-    try {
-      // 寫入 Firebase 資料庫
-      await set(ref(db, `library_teams/${newId}`), {
-        name: name.trim(),
-        roster: [] // 預留空的球員名單，未來可擴充
-      });
-      
-      alert(`✅ 球隊「${name}」建立成功！`);
-      
-      // 建立成功後，重新整理大廳的隊伍列表與下拉選單
-      if (typeof window.loadTeams === 'function') {
-        window.loadTeams();
-      }
-    } catch (error) { 
-      console.error("建立球隊時發生錯誤:", error);
-      alert("❌ 建立球隊失敗: " + error.message); 
-    }
-  };
-
 
   // ==========================================
   // 🎮 2. 賽事控制核心 (解決按鈕失效問題)
