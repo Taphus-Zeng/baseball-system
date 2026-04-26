@@ -2,280 +2,124 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>棒球轉播計分板 Overlay</title>
+    <title>BSO 疊加畫面 - 專業轉播版</title>
     <style>
-        /* ==========================================
-           🎨 基礎版面與透明背景設定 (專為轉播設計)
-           ========================================== */
-        body {
-            margin: 0;
-            padding: 20px;
-            /* 必須是透明背景，轉播軟體才能疊加 */
-            background-color: transparent; 
-            font-family: 'Helvetica Neue', Helvetica, Arial, "微軟正黑體", sans-serif;
-            color: #fff;
-            overflow: hidden; /* 防止滾動條出現 */
-        }
+        /* 基礎透明與向量縮放設定 */
+        body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; font-family: sans-serif; font-weight: bold; }
+        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; }
 
-        /* 記分板主容器 */
-        #scoreboard {
-            display: flex;
-            background: linear-gradient(180deg, #1a1c29 0%, #101451 100%);
-            border: 2px solid #ffffff40;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            width: 800px; /* 您可依據轉播版面自由調整寬度 */
-            height: 80px;
-            overflow: hidden;
-        }
-
-        /* ==========================================
-           ⚾ 區塊 1：隊伍與比分區
-           ========================================== */
-        .team-section {
-            display: flex;
-            flex-direction: column;
-            width: 40%;
-            background: rgba(0, 0, 0, 0.4);
-        }
-        .team-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 50%;
-            padding: 0 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .team-row:last-child { border-bottom: none; }
+        /* 記分板主體 */
+        .scoreboard { width: 480px; background: rgba(16, 20, 81, 0.95); color: white; border: 2px solid #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
         
-        .team-name {
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-        .team-score {
-            font-size: 28px;
-            font-weight: 900;
-            color: #f1c40f; /* 醒目的黃色比分 */
-        }
+        .main-row { display: flex; height: 70px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .team-box { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-right: 1px solid rgba(255,255,255,0.2); }
+        .score { font-size: 32px; color: #f1c40f; }
+        .inning-box { width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
 
-        /* ==========================================
-           ⚾ 區塊 2：局數與壘包區
-           ========================================== */
-        .info-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30%;
-            border-left: 2px solid rgba(255,255,255,0.2);
-            border-right: 2px solid rgba(255,255,255,0.2);
-            padding: 0 15px;
-            gap: 20px;
-        }
+        /* BSO 燈號區 */
+        .status-row { display: flex; padding: 10px 15px; align-items: center; justify-content: space-between; background: #000; }
+        .bso-container { display: flex; gap: 15px; }
+        .bso-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 15px; height: 15px; border-radius: 50%; background: #333; border: 1px solid #666; }
         
-        /* 局數顯示 */
-        .inning-display {
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: #ecf0f1;
-        }
-        .inning-arrow { font-size: 20px; color: #e74c3c; margin-right: 5px; }
+        /* 燈號顏色 */
+        .dot.active-B { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+        .dot.active-S { background: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
+        .dot.active-O { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
 
-        /* 壘包鑽石圖 (CSS 繪製) */
-        .bases-container {
-            position: relative;
-            width: 50px;
-            height: 50px;
-            transform: rotate(45deg);
-        }
-        .base {
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            background-color: rgba(255,255,255,0.2);
-            border: 2px solid #fff;
-        }
-        .base.active { background-color: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
-        #base-2 { top: 0; left: 0; }
-        #base-1 { top: 0; right: 0; }
-        #base-3 { bottom: 0; left: 0; }
-        #base-home { bottom: 0; right: 0; background-color: #fff; } /* 本壘不變色 */
-
-        /* ==========================================
-           ⚾ 區塊 3：BSO 燈號區
-           ========================================== */
-        .bso-section {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            width: 30%;
-            padding: 0 15px;
-            gap: 6px;
-        }
-        .bso-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .bso-label {
-            font-size: 18px;
-            font-weight: bold;
-            width: 20px;
-        }
-        .bso-label.B { color: #2ecc71; } /* 壞球綠 */
-        .bso-label.S { color: #f1c40f; } /* 好球黃 */
-        .bso-label.O { color: #e74c3c; } /* 出局紅 */
-
-        .dots { display: flex; gap: 6px; }
-        .dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background-color: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-        /* 燈號亮起時的顏色 */
-        .dot.active.B { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-        .dot.active.S { background-color: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
-        .dot.active.O { background-color: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
-
+        /* 壘包圖案 */
+        .bases { position: relative; width: 40px; height: 40px; transform: rotate(45deg); margin-right: 10px; }
+        .base { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; }
+        .base.active { background: #f1c40f; }
+        #base1 { top: 0; right: 0; } #base2 { top: 0; left: 0; } #base3 { bottom: 0; left: 0; }
     </style>
 </head>
 <body>
 
-    <div id="scoreboard">
-        
-        <div class="team-section">
-            <div class="team-row">
-                <span class="team-name" id="away-name">客隊</span>
-                <span class="team-score" id="away-score">0</span>
+<div id="scale-wrapper">
+    <div class="scoreboard">
+        <div class="main-row">
+            <div class="team-box">
+                <span id="away-name">客隊</span>
+                <span id="away-score" class="score">0</span>
             </div>
-            <div class="team-row">
-                <span class="team-name" id="home-name">主隊</span>
-                <span class="team-score" id="home-score">0</span>
+            <div class="inning-box">
+                <span id="inning-half" style="font-size: 14px; color: #e74c3c;">▲</span>
+                <span id="inning-num" style="font-size: 24px;">1</span>
             </div>
-        </div>
-
-        <div class="info-section">
-            <div class="inning-display">
-                <span class="inning-arrow" id="inning-half">▲</span>
-                <span id="inning-number">1</span>
-            </div>
-            <div class="bases-container">
-                <div class="base" id="base-2"></div>
-                <div class="base" id="base-1"></div>
-                <div class="base" id="base-3"></div>
-                <div class="base" id="base-home"></div>
+            <div class="team-box" style="border-right: none;">
+                <span id="home-score" class="score">0</span>
+                <span id="home-name">主隊</span>
             </div>
         </div>
 
-        <div class="bso-section">
-            <div class="bso-row">
-                <span class="bso-label B">B</span>
-                <div class="dots" id="dots-b">
-                    <div class="dot B"></div><div class="dot B"></div><div class="dot B"></div>
-                </div>
+        <div class="status-row">
+            <div class="bso-container">
+                <div class="bso-item"><span>B</span><div id="b-dots" style="display:flex;gap:5px;"></div></div>
+                <div class="bso-item"><span>S</span><div id="s-dots" style="display:flex;gap:5px;"></div></div>
+                <div class="bso-item"><span>O</span><div id="o-dots" style="display:flex;gap:5px;"></div></div>
             </div>
-            <div class="bso-row">
-                <span class="bso-label S">S</span>
-                <div class="dots" id="dots-s">
-                    <div class="dot S"></div><div class="dot S"></div>
-                </div>
-            </div>
-            <div class="bso-row">
-                <span class="bso-label O">O</span>
-                <div class="dots" id="dots-o">
-                    <div class="dot O"></div><div class="dot O"></div>
-                </div>
+            <div class="bases">
+                <div id="base2" class="base"></div>
+                <div id="base1" class="base"></div>
+                <div id="base3" class="base"></div>
             </div>
         </div>
-
     </div>
+</div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // ⚠️ 1. 請將此處替換為與 control.html 一模一樣的設定
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app", 
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+    // 1. Firebase 配置 (請在此填入您的真實金鑰)
+  const firebaseConfig = {
+  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
+  authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
+  databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "baseball-scoreboard-294d8",
+  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
+  messagingSenderId: "179359096477",
+  appId: "1:179359096477:web:8188f897371651442e7e74"
+  };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('gameId');
 
-        // 2. 從網址抓取賽事 ID (例如: overlay.html?gameId=game_123)
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
-
-        if (!gameId) {
-            document.body.innerHTML = "<h2 style='color:red; background:black; padding:10px;'>錯誤：無效的賽事 ID (URL 缺少 ?gameId=)</h2>";
-            throw new Error("No gameId provided");
-        }
-
-        // 3. 建立即時監聽器，一旦 Firebase 資料改變，立刻更新畫面
-        const gameRef = ref(db, `games/${gameId}`);
-        
-        onValue(gameRef, (snapshot) => {
+    if (gameId) {
+        onValue(ref(db, `games/${gameId}`), (snapshot) => {
             const data = snapshot.val();
-            if (!data) return; // 若無資料則忽略
+            if (!data) return;
 
-            // --- A. 更新隊伍與分數 ---
-            if (data.teams) {
-                document.getElementById('away-name').innerText = data.teams.away?.name || "客隊";
-                document.getElementById('away-score').innerText = data.teams.away?.score || 0;
-                document.getElementById('home-name').innerText = data.teams.home?.name || "主隊";
-                document.getElementById('home-score').innerText = data.teams.home?.score || 0;
-            }
+            // 更新 UI
+            document.getElementById('away-name').innerText = data.teams.away.name;
+            document.getElementById('home-name').innerText = data.teams.home.name;
+            document.getElementById('away-score').innerText = data.teams.away.score;
+            document.getElementById('home-score').innerText = data.teams.home.score;
+            document.getElementById('inning-num').innerText = data.gameInfo.inning;
+            document.getElementById('inning-half').innerText = data.gameInfo.isTop ? "▲" : "▼";
 
-            // --- B. 更新局數 (上/下半局與數字) ---
-            if (data.gameInfo) {
-                document.getElementById('inning-half').innerText = data.gameInfo.isTop ? "▲" : "▼";
-                document.getElementById('inning-half').style.color = data.gameInfo.isTop ? "#e74c3c" : "#f1c40f";
-                document.getElementById('inning-number').innerText = data.gameInfo.inning || 1;
-            }
+            // BSO 燈號渲染
+            renderDots('b-dots', data.count.balls, 3, 'active-B');
+            renderDots('s-dots', data.count.strikes, 2, 'active-S');
+            renderDots('o-dots', data.count.outs, 2, 'active-O');
 
-            // --- C. 更新壘包狀態 ---
-            if (data.bases) {
-                document.getElementById('base-1').classList.toggle('active', data.bases.first);
-                document.getElementById('base-2').classList.toggle('active', data.bases.second);
-                document.getElementById('base-3').classList.toggle('active', data.bases.third);
-            }
-
-            // --- D. 更新 BSO 燈號 ---
-            if (data.count) {
-                updateDots('dots-b', data.count.balls, 3);
-                updateDots('dots-s', data.count.strikes, 2);
-                updateDots('dots-o', data.count.outs, 2);
-            }
-            
-            // --- E. (選用) 更新主題 ---
-            if (data.theme) {
-                document.getElementById('scoreboard').className = `theme-${data.theme}`;
-            }
+            // 壘包渲染
+            document.getElementById('base1').className = data.bases.first ? 'base active' : 'base';
+            document.getElementById('base2').className = data.bases.second ? 'base active' : 'base';
+            document.getElementById('base3').className = data.bases.third ? 'base active' : 'base';
         });
+    }
 
-        // 輔助函數：控制燈號亮起數量
-        function updateDots(containerId, count, max) {
-            const dots = document.getElementById(containerId).children;
-            // 確保數值不會超過最大值 (例如壞球最多亮 3 個)
-            const safeCount = Math.min(count || 0, max);
-            for (let i = 0; i < max; i++) {
-                if (i < safeCount) {
-                    dots[i].classList.add('active');
-                } else {
-                    dots[i].classList.remove('active');
-                }
-            }
+    function renderDots(id, count, max, activeClass) {
+        let html = '';
+        for (let i = 0; i < max; i++) {
+            html += `<div class="dot ${i < count ? activeClass : ''}"></div>`;
         }
-    </script>
+        document.getElementById(id).innerHTML = html;
+    }
+</script>
 </body>
 </html>
