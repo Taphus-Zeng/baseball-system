@@ -3,332 +3,560 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業轉播控制中心 - 完整版</title>
+    <title>轉播中心 - 賽事與隊伍管理系統</title>
     <style>
-        /* 基礎樣式 */
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f2f5; margin: 0; padding-bottom: 50px; }
-        button { cursor: pointer; border-radius: 4px; border: none; transition: 0.2s; }
-        button:hover { opacity: 0.8; }
+        /* 共用基礎樣式 */
+        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #ffffff; color: #000; margin: 0; user-select: none; }
         
-        /* 大廳排版樣式 */
-        .grid-container { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
-        @media (max-width: 1024px) { .grid-container { grid-template-columns: 1fr; } }
+        /* ================= 1. 首頁大廳視圖樣式 ================= */
+        #home-view { padding: 30px; max-width: 1200px; margin: 0 auto; }
+        .dashboard-header { text-align: center; color: #101451; border-bottom: 3px solid #101451; padding-bottom: 10px; margin-bottom: 30px; }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .panel-card { background: #f8f9fa; padding: 25px; border-radius: 12px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .panel-card h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ccc; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
         
-        .panel-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .table-header, .table-row { display: grid; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; }
-        .team-grid { grid-template-columns: 200px 1fr 140px; }
-        .game-grid { grid-template-columns: 1fr 160px 180px; }
-        .table-header { background: #101451; color: white; font-weight: bold; border-radius: 8px 8px 0 0; }
-        .col-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; font-size: 16px; }
+        .list-item { background: white; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .list-item strong { font-size: 18px; color: #333; }
+        .btn-primary { background: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-success { background: #2ecc71; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .btn-success:hover { background: #27ae60; }
+        .btn-outline { background: white; color: #3498db; border: 1px solid #3498db; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
+        /* ===== 新增：刪除按鈕 ===== */
+        .btn-danger { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-danger:hover { background: #c0392b; }
 
-        /* 控制台樣式 (完全復刻) */
-        .controller-box { background: #fff; border-radius: 12px; padding: 20px; margin-top: 20px; }
-        .bso-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 20px; font-weight: bold; color: white; margin: 5px; }
-        .btn-b { background: #2ecc71; } .btn-s { background: #f1c40f; color: #000; } .btn-o { background: #e74c3c; }
-        .base-btn { width: 50px; height: 50px; background: #ddd; border: 2px solid #999; transform: rotate(45deg); margin: 10px; }
-        .base-btn.active { background: #f1c40f; border-color: #f39c12; }
+        .setup-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 20px; border-left: 5px solid #3498db; }
+        .setup-box input, .setup-box select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+
+        /* ================= 2. 轉播控制台視圖樣式 (CameraFi Studio 風格) ================= */
+        #controller-view { padding: 20px; display: none; max-width: 1200px; margin: 0 auto; }
         
-        /* 輔助類別 */
-        .btn-blue { background: #3498db; color: white; padding: 8px 15px; }
-        .btn-red { background: #e74c3c; color: white; padding: 8px 15px; }
-        .btn-green { background: #27ae60; color: white; padding: 8px 15px; }
+        /* 控制台主卡片 */
+        .camerafi-control-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: stretch; 
+            background: #ffffff; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08); 
+            border: 1px solid #eaedf1; 
+            gap: 30px; 
+            margin-bottom: 30px; 
+        }
 
-/* ==========================================
-   🎮 原版深色控制面板專屬樣式 (完全復刻)
-   ========================================== */
-#controller-view {
-    background-color: #0f172a;
-    color: white;
-    min-height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
-}
-.ctrl-container { max-width: 1200px; margin: 0 auto; }
-.ctrl-card {
-    background: #1e293b;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    margin-bottom: 20px;
-}
-.ctrl-header {
-    background: #1e293b;
-    padding: 15px 20px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    border-bottom: 3px solid #3b82f6;
-}
-.ctrl-btn {
-    border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s;
-}
-.ctrl-btn:hover { opacity: 0.8; }
-.btn-blue { background: #3b82f6; } .btn-red { background: #ef4444; } .btn-gray { background: #475569; }
-.btn-green { background: #22c55e; } .btn-dark { background: #334155; }
+        /* 頂部小標題 (Inning, Base, Count) */
+        .section-title { 
+            font-size: 16px; 
+            color: #353131; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            margin-bottom: 15px; 
+            font-weight: 600; 
+            text-align: center; 
+            height: auto; 
+        }
 
-/* BSO 燈號與壘包 */
-.bso-circle { width: 45px; height: 45px; border-radius: 50%; font-size: 18px; font-weight: bold; border: none; margin: 0 5px; cursor: pointer; color: white; }
-.b-light { background: #22c55e; } .s-light { background: #facc15; color: black; } .o-light { background: #ef4444; }
-.diamond-base { width: 50px; height: 50px; background: #334155; border: 3px solid #64748b; transform: rotate(45deg); margin: 15px; cursor: pointer; }
-.diamond-base.active { background: #facc15; border-color: #eab308; box-shadow: 0 0 15px rgba(250, 204, 21, 0.5); }
-.score-display { font-size: 64px; font-weight: bold; color: #facc15; margin: 10px 0; font-family: Arial, sans-serif; }
+        /* --- 1. 計分區塊 --- */
+        .team-section { display: flex; gap: 20px; flex: 1.5; } 
+        .team-col { display: flex; flex-direction: column; flex: 1; align-items: center; }
+        
+        .team-name-input { 
+            box-sizing: border-box; 
+            width: 100%; 
+            padding: 8px 5px; 
+            border: none;
+            border-bottom: 2px solid #ddd; 
+            font-size: 20px; 
+            font-weight: 800; 
+            text-align: center; 
+            margin-bottom: 15px; 
+            color: #333;
+            background: transparent;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .team-name-input:focus { border-bottom-color: #3498db; }
 
+        .btn-score { 
+            width: 100%; 
+            background-color: #f4f6f8; 
+            color: #333;
+            border: 1px solid #e1e3e6; 
+            border-radius: 8px; 
+            font-size: 24px; 
+            font-weight: bold; 
+            padding: 12px 0; 
+            margin-bottom: 8px; 
+            cursor: pointer; 
+            transition: all 0.1s;
+        }
+        .btn-score:hover { background-color: #e9ecef; }
+        .btn-score:active { background-color: #dee2e6; transform: scale(0.98); }
+
+        /* --- 2. 局數區塊 --- */
+        .inning-col { display: flex; flex-direction: column; width: 140px; }
+        .inning-display { 
+            background: #f4f6f8; 
+            border: 1px solid #e1e3e6; 
+            border-radius: 8px; 
+            font-size: 42px; 
+            padding: 0; 
+            text-align: center; 
+            font-weight: 800; 
+            color: #333;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin-bottom: 8px; 
+            flex-grow: 1;
+        }
+        .arrow-up { color: #e74c3c; font-size: 40px; margin-left: 5px; } 
+        /* 必須加上 inline-block 才能正確旋轉 */
+        .arrow-down { color: #e74c3c; font-size: 40px; margin-left: 5px; transform: rotate(180deg); display: inline-block; } 
+        
+        .inning-nav { display: flex; gap: 8px; } 
+        .btn-nav { 
+            flex: 1; 
+            background-color: #f4f6f8; 
+            border: 1px solid #e1e3e6; 
+            border-radius: 8px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            color: #555;
+            padding: 8px 0; 
+            cursor: pointer; 
+            transition: background-color 0.1s;
+        }
+        .btn-nav:hover { background-color: #e9ecef; }
+        .btn-nav:active { background-color: #dee2e6; transform: scale(0.95); }
+
+        /* --- 3. 壘包區塊 --- */
+        .base-col { display: flex; flex-direction: column; align-items: flex-start; width: 140px; }
+        .bases-container { position: relative; width: 110px; height: 110px; margin: 5px auto 0; }
+        .base-diamond { 
+            position: absolute; 
+            width: 32px; 
+            height: 32px; 
+            background: #f4f6f8; 
+            border: 2px solid #cbd0d6; 
+            border-radius: 4px;
+            transform: rotate(45deg); 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+        }
+        .base-diamond:hover { border-color: #a0aab5; }
+        .base-diamond.active { 
+            background-color: #f1c40f; /* 經典 CameraFi 黃色壘包 */
+            border-color: #f39c12; 
+            box-shadow: 0 0 10px rgba(241,196,15,0.4);
+        }
+        #ctrl-base-2 { top: 5px; left: 38px; } 
+        #ctrl-base-3 { top: 38px; left: 5px; } 
+        #ctrl-base-1 { top: 38px; left: 71px; }
+
+        /* --- 4. 壞好球數 (BSO) 區塊 --- */
+        .count-col { display: flex; flex-direction: column; width: 180px; }
+        .count-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; } 
+        .count-label { font-size: 22px; font-weight: 800; width: 24px; text-align: left; color: #333; }
+        .dot { 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            border: none; 
+            background-color: #ebedf0; 
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            pointer-events: none; 
+            transition: all 0.2s ease;
+        }
+        .dot.b-active { background-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.5); } 
+        .dot.s-active { background-color: #f1c40f; box-shadow: 0 0 8px rgba(241,196,15,0.5); } 
+        .dot.o-active { background-color: #e74c3c; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
+        
+        .out-click-area { display: flex; align-items: center; gap: 12px; cursor: pointer; flex-grow: 1; }
+        .btn-cs { 
+            width: 32px; 
+            height: 32px; 
+            background: #e0e4e8; 
+            color: #555; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 13px; 
+            font-weight: 800; 
+            text-transform: uppercase;
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin-left: auto; 
+            transition: background 0.2s;
+        }
+        .btn-cs:hover { background: #ced4da; }
+        .btn-cs:active { background: #b1b8c0; transform: scale(0.95); }
+        
+        /* 原本的 .panel 設定由這裡繼續往下接... */
+        
+        .panel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; background: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 8px; padding: 15px; }
+        .panel h3 { margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
+        .player-info-container { margin-bottom: 20px; }
+        .player-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .dh-toggle-label { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; color: #555; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; } .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ecc71; } input:checked + .slider:before { transform: translateX(26px); }
+
+        .teams-lineup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .lineup-panel { background: #fdfdfd; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
+        .team-roster-header { display: flex; justify-content: space-between; align-items: center; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; }
+        .btn-edit-roster { background: white; border: 1px solid #aaa; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .pitcher-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 10px; background: #e8f5e9; border-radius: 6px; font-weight: bold; border-left: 5px solid #2ecc71; }
+        .pitcher-info { display: flex; align-items: center; gap: 10px; } .pitcher-label { font-size: 12px; color: #555; } .pitcher-name { font-size: 16px; } .pitcher-number { font-size: 12px; color: #666; background: white; padding: 2px 6px; border-radius: 10px; border: 1px solid #ccc; }
+        
+        .lineup-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .lineup-table th { padding: 8px 5px; border-bottom: 2px solid #ddd; color: #666; font-size: 11px; }
+        .lineup-table td { padding: 6px 5px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .lineup-table tr.draggable-row { background-color: white; transition: background-color 0.2s; }
+        .lineup-table tr.draggable-row:hover { background-color: #f9f9f9; }
+        .lineup-table tr.drag-over { background-color: #ffeaa7 !important; border-top: 2px solid #e17055; }
+        select.player-select, select.pos-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; }
+        .drag-handle { cursor: grab; font-size: 16px; color: #e74c3c; text-align: center; }
+        .btn-set-batter { background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .btn-set-batter.active { background: #e74c3c; box-shadow: 0 0 5px rgba(231, 76, 60, 0.6); }
+
+        .batter-result-panel { background: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .result-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2ecc71; padding-bottom: 10px; margin-bottom: 15px; }
+        .current-batter-display { font-size: 20px; font-weight: bold; color: #2c3e50; display: flex; align-items: center; gap: 10px; }
+        .batter-badge { background: #f39c12; color: white; padding: 2px 8px; border-radius: 4px; font-size: 14px; }
+        .manual-edit-group { display: flex; gap: 10px; align-items: center; font-size: 14px; background: #f9f9f9; padding: 5px 10px; border-radius: 6px; border: 1px solid #eee; }
+        .manual-edit-group input { width: 40px; padding: 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-manual-save { background: #7f8c8d; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+
+        .result-categories { display: flex; gap: 20px; justify-content: space-between; }
+        .category-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .category-title { font-size: 14px; font-weight: bold; color: #555; text-align: center; margin-bottom: 5px; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn-result { padding: 10px 5px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); transition: 0.1s; text-align: center; }
+        .btn-result:active { transform: scale(0.95); }
+        .btn-out { background-color: #fadbd8; color: #c0392b; } .btn-hit { background-color: #d5f5e3; color: #27ae60; } .btn-obp { background-color: #d6eaf8; color: #2980b9; } .btn-etc { background-color: #fae5d3; color: #d35400; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+        .roster-edit-row { display: grid; grid-template-columns: 50px 1fr 50px 50px; gap: 10px; margin-bottom: 10px; align-items: center; text-align: center; font-size: 12px; font-weight: bold;}
+        .roster-edit-row input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center;}
+        .btn-save-modal { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; }
+        
+        /* 針對資料庫的編輯 modal */
+        .lib-roster-row { display: grid; grid-template-columns: 60px 1fr; gap: 10px; margin-bottom: 10px; }
+        .lib-roster-row input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .advanced-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .input-row { display: flex; gap: 10px; } .input-row input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-action { background: #3498db; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        
+        .header-top-bar { background: #101451; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-    <div id="top-nav" style="display:none; background:#101451; color:white; padding:15px 30px; display:flex; justify-content:space-between; align-items:center;">
-        <span id="nav-game-title" style="font-size:20px; font-weight:bold;">轉播系統</span>
-        <div>
-            <button onclick="location.href=window.location.pathname" style="background:#666; color:white; padding:8px 15px; margin-right:10px;">回大廳</button>
-            <button onclick="window.logoutSystem()" style="background:#e74c3c; color:white; padding:8px 15px;">登出</button>
-        </div>
+<div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #101451; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
+    <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; color: #333; text-align: center;">
+        <h1 style="margin-top: 0; color: #101451;">記分板系統登入</h1>
+        <input type="email" id="login-email" placeholder="電子郵件" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px;">
+        <input type="password" id="login-password" placeholder="密碼" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px;">
+        <button id="login-btn" style="width: 100%; padding: 12px; background-color: #101451; color: white; border: none; border-radius: 6px; font-size: 18px; cursor: pointer;">登入</button>
+        <div id="login-error" style="color: #d32f2f; margin-top: 15px; min-height: 20px;"></div>
     </div>
+</div>
 
-    <div id="login-view" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;">
-        <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.2); width:350px;">
-            <h2 style="text-align:center; color:#101451;">管理端登入</h2>
-            <input type="email" id="login-email" placeholder="Email" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
-            <input type="password" id="login-password" placeholder="密碼" style="width:100%; padding:12px; margin-bottom:25px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
-            <button onclick="window.loginSystem()" style="width:100%; background:#101451; color:white; padding:12px; border-radius:5px; font-size:16px;">登入</button>
-        </div>
+<div class="header-top-bar" id="top-nav" style="display: none;">
+    <div style="font-size: 18px; font-weight: bold;" id="nav-game-title">賽事控制台</div>
+    <div>
+        <a href="control.html" style="color: white; text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 14px;">回首頁大廳</a>
+        <a id="nav-overlay-link" href="#" target="_blank" style="color: #FFFF00; text-decoration: none; margin-left: 15px; margin-right: 15px; font-size: 14px;">開啟疊加網頁 ↗</a>
+        <button onclick="handleLogout()" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 14px; cursor: pointer;">登出</button>
     </div>
+</div>
 
-    <div id="home-view" style="display:none;">
-        <div class="grid-container">
-            <div>
-                <div class="panel-card" style="margin-bottom:20px;">
-                    <h3>建立新賽事</h3>
-                    <input type="text" id="new-game-title" placeholder="賽事名稱 (例：2026 春季聯賽)" style="width:100%; padding:10px; margin-bottom:15px; box-sizing:border-box;">
-                    <div style="display:flex; gap:10px; margin-bottom:15px;">
-                        <select id="new-game-away" style="flex:1; padding:10px;"></select>
-                        <span style="align-self:center; font-weight:bold;">VS</span>
-                        <select id="new-game-home" style="flex:1; padding:10px;"></select>
-                    </div>
-                    <button onclick="window.createNewGame()" style="width:100%; background:#27ae60; color:white; padding:12px; font-size:16px;">建立賽事</button>
-                </div>
-
-                <div class="panel-card">
-                    <h3>球隊資料庫 <button onclick="window.createLibraryTeam()" style="float:right; background:#3498db; color:white; padding:5px 12px; font-size:13px;">+ 新增隊伍</button></h3>
-                    <div id="teams-list" style="margin-top:15px;"></div>
-                </div>
-            </div>
-
-            <div class="panel-card">
-                <h3>賽事大廳 (歷次賽事)</h3>
-                <div id="recent-games-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="roster-editor-view" style="display:none; padding:30px; max-width:900px; margin:0 auto;">
+<div id="home-view">
+    <h1 class="dashboard-header" style="position: relative;">
+        ⚾ 轉播中心 - 賽事大廳
+        <button onclick="handleLogout()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold;">登出</button>
+    </h1>
+    <div class="grid-container">
         <div class="panel-card">
-            <h2 id="edit-team-name" style="border-bottom:2px solid #101451; padding-bottom:10px;">編輯球員名單</h2>
-            <div id="roster-input-list" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:15px; margin-bottom:25px;"></div>
-            <div style="text-align:center;">
-                <button onclick="window.saveCurrentRoster()" class="btn-green" style="padding:12px 40px; font-size:16px;">儲存並返回</button>
-                <button onclick="location.reload()" style="padding:12px 40px; font-size:16px; background:#95a5a6; color:white; margin-left:15px;">取消</button>
+            <h2 onclick="toggleTeamSort()" style="cursor:pointer;" title="點擊切換 新->舊 / 舊->新">🛡️ 隊伍資料庫 ↕️</h2>
+            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">預先建立好參賽隊伍與25人名單，未來建立比賽即可快速載入。</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="new-lib-team-name" placeholder="輸入隊伍名稱 (例如: 平鎮高中)" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                <button class="btn-success" onclick="createLibraryTeam()">建立隊伍</button>
             </div>
-        </div>
-    </div>
-
-<div id="controller-view" style="display:none;">
-    <div class="ctrl-container">
-        
-        <div class="ctrl-header">
-            <h2 style="margin:0; font-size:22px;">賽事控制台 (轉播系統總管)</h2>
-            <button onclick="location.reload()" class="ctrl-btn btn-red" style="font-size:16px;">結束控制 / 回大廳</button>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-            <div class="ctrl-card">
-                <h3 style="margin-top:0; color:#94a3b8; font-size:16px;">切換風格主題</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <button class="ctrl-btn btn-blue" onclick="window.selectTheme('modern')" style="border:2px solid #93c5fd;">現代運動 (Modern)</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.selectTheme('retro')">復古轉播 (Retro)</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.selectTheme('cyber')">電競霓虹 (Cyber)</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.selectTheme('minimal')">極簡扁平 (Minimal)</button>
+            <div id="lib-teams-list">
                 </div>
-            </div>
-
-            <div class="ctrl-card">
-                <h3 style="margin-top:0; color:#94a3b8; font-size:16px;">超清向量速度網址產生器</h3>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span>誤差補償值：</span>
-                    <button class="ctrl-btn btn-gray" onclick="window.updateSpeedOffset(-1)">-1</button>
-                    <span id="display-offset" style="font-size:18px; font-weight:bold; width:30px; text-align:center;">0</span>
-                    <button class="ctrl-btn btn-gray" onclick="window.updateSpeedOffset(1)">+1</button>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="speed-url-result" readonly style="flex:1; padding:8px; background:#0f172a; color:#cbd5e1; border:1px solid #475569; border-radius:4px;">
-                    <button class="ctrl-btn btn-green" id="btn-copy-speed" onclick="window.copySpeedUrl()">複製網址</button>
-                </div>
-            </div>
         </div>
 
-        <div class="ctrl-card" style="display:flex; gap:15px; align-items:center;">
-            <h3 style="margin:0 15px 0 0; color:#94a3b8; font-size:16px;">快速功能</h3>
-            <button class="ctrl-btn btn-blue" onclick="window.nextInning()">下一半局 (局數+1，歸零BSO)</button>
-            <button class="ctrl-btn btn-gray" onclick="window.resetCount()">重置 BSO 燈號</button>
-            <button class="ctrl-btn btn-gray" onclick="window.clearBases()">清除所有壘包</button>
-        </div>
-
-        <div class="ctrl-card" style="display:grid; grid-template-columns: 1fr 1.2fr 1fr; gap:20px; text-align:center;">
+        <div class="panel-card">
+            <h2>🏆 賽事大廳</h2>
             
-            <div style="background:#334155; padding:20px; border-radius:8px; border-top:5px solid #ef4444;">
-                <h3 id="ctrl-away-name" style="margin-top:0; font-size:24px;">客隊 (Away)</h3>
-                <div class="score-display" id="display-away-score">0</div>
-                <div style="margin-bottom:15px;">
-                    <button class="ctrl-btn btn-blue" onclick="window.updateScore('away', 1)" style="font-size:20px; padding:5px 20px;">+1</button>
-                    <button class="ctrl-btn btn-gray" onclick="window.updateScore('away', -1)" style="font-size:20px; padding:5px 20px;">-1</button>
-                </div>
-                
-                <hr style="border-color:#475569; margin:15px 0;">
-                <div style="text-align:left; font-size:14px; color:#cbd5e1;">
-                    <p style="margin:5px 0;">安打 / 失誤：</p>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('away', 'H', 1)">+H</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('away', 'H', -1)">-H</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('away', 'E', 1)">+E</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('away', 'E', -1)">-E</button>
-                </div>
-
-                <hr style="border-color:#475569; margin:15px 0;">
-                <div style="text-align:left; font-size:14px; color:#cbd5e1;">
-                    <p style="margin:5px 0;">目前投手用球數：<span id="ctrl-away-pitch-count" style="font-weight:bold; color:white; font-size:18px;">0</span></p>
-                    <button class="ctrl-btn btn-dark" onclick="window.updatePitchCount('away', 1)">+1</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updatePitchCount('away', -1)">-1</button>
-                    <button class="ctrl-btn btn-red" onclick="window.updatePitchCount('away', 0)">歸零</button>
-                </div>
-            </div>
-
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                <div style="font-size:32px; font-weight:bold; color:#cbd5e1; margin-bottom:20px;">
-                    <button class="ctrl-btn btn-dark" onclick="window.changeInningHalf()" style="font-size:24px; padding:5px 15px;" id="ctrl-inning-half">▲</button>
-                    <span id="ctrl-inning-num" style="margin:0 15px;">1</span>
-                    <button class="ctrl-btn btn-dark" onclick="window.changeInningNum()" style="font-size:24px; padding:5px 15px;">局數+1</button>
-                </div>
-
-                <div style="position:relative; width:150px; height:150px; margin-bottom:30px;">
-                    <div id="base-2" class="diamond-base" onclick="window.toggleBase('second')" style="position:absolute; top:0; left:45px;"></div>
-                    <div id="base-3" class="diamond-base" onclick="window.toggleBase('third')" style="position:absolute; bottom:20px; left:0;"></div>
-                    <div id="base-1" class="diamond-base" onclick="window.toggleBase('first')" style="position:absolute; bottom:20px; right:0;"></div>
-                </div>
-
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div>
-                        <span style="font-size:24px; font-weight:bold; color:#22c55e; margin-right:10px;">B</span>
-                        <button class="bso-circle b-light" onclick="window.cycleCount('balls', 4)"></button>
+            <div class="setup-box">
+                <h3 style="margin-top: 0; color: #2c3e50;">快速建立新比賽</h3>
+                <input type="text" id="new-game-title" placeholder="賽事標題 (例如: 黑豹旗四強賽)">
+                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; color: #555; font-weight: bold;">客隊 (Away)</label>
+                        <select id="new-game-away"><option value="">-- 選擇隊伍庫隊伍 --</option></select>
                     </div>
-                    <div>
-                        <span style="font-size:24px; font-weight:bold; color:#facc15; margin-right:10px;">S</span>
-                        <button class="bso-circle s-light" onclick="window.cycleCount('strikes', 3)"></button>
-                    </div>
-                    <div>
-                        <span style="font-size:24px; font-weight:bold; color:#ef4444; margin-right:10px;">O</span>
-                        <button class="bso-circle o-light" onclick="window.cycleCount('outs', 3)"></button>
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; color: #555; font-weight: bold;">主隊 (Home)</label>
+                        <select id="new-game-home"><option value="">-- 選擇隊伍庫隊伍 --</option></select>
                     </div>
                 </div>
+                <button class="btn-primary" style="width: 100%; padding: 12px; font-size: 16px;" onclick="createNewGame()">建立比賽並進入控制台 ➡️</button>
             </div>
 
-            <div style="background:#334155; padding:20px; border-radius:8px; border-top:5px solid #3b82f6;">
-                <h3 id="ctrl-home-name" style="margin-top:0; font-size:24px;">主隊 (Home)</h3>
-                <div class="score-display" id="display-home-score">0</div>
-                <div style="margin-bottom:15px;">
-                    <button class="ctrl-btn btn-blue" onclick="window.updateScore('home', 1)" style="font-size:20px; padding:5px 20px;">+1</button>
-                    <button class="ctrl-btn btn-gray" onclick="window.updateScore('home', -1)" style="font-size:20px; padding:5px 20px;">-1</button>
+            <h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">進行中/已建立賽事</h3>
+            <div id="games-list">
                 </div>
-                
-                <hr style="border-color:#475569; margin:15px 0;">
-                <div style="text-align:left; font-size:14px; color:#cbd5e1;">
-                    <p style="margin:5px 0;">安打 / 失誤：</p>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('home', 'H', 1)">+H</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('home', 'H', -1)">-H</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('home', 'E', 1)">+E</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updateTeamStat('home', 'E', -1)">-E</button>
-                </div>
-
-                <hr style="border-color:#475569; margin:15px 0;">
-                <div style="text-align:left; font-size:14px; color:#cbd5e1;">
-                    <p style="margin:5px 0;">目前投手用球數：<span id="ctrl-home-pitch-count" style="font-weight:bold; color:white; font-size:18px;">0</span></p>
-                    <button class="ctrl-btn btn-dark" onclick="window.updatePitchCount('home', 1)">+1</button>
-                    <button class="ctrl-btn btn-dark" onclick="window.updatePitchCount('home', -1)">-1</button>
-                    <button class="ctrl-btn btn-red" onclick="window.updatePitchCount('home', 0)">歸零</button>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>
 
-        <div class="controller-box" style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px;">
-            <div style="text-align:center; background:#eee; padding:20px; border-radius:10px;">
-                <h4>BSO 燈號控制</h4>
-                <div>
-                    <button class="bso-btn btn-b" onclick="window.cycleCount('balls', 4)">B</button>
-                    <button class="bso-btn btn-s" onclick="window.cycleCount('strikes', 3)">S</button>
-                    <button class="bso-btn btn-o" onclick="window.cycleCount('outs', 3)">O</button>
-                </div>
-                <div style="margin-top:15px;">
-                    <button onclick="window.resetCount()" style="padding:10px 30px; background:#555; color:white;">全部清除</button>
-                    <button onclick="window.nextInning()" style="padding:10px 30px; background:#101451; color:white;">下一個半局</button>
-                </div>
-            </div>
-            <div style="text-align:center; background:#eee; padding:20px; border-radius:10px;">
-                <h4>壘包狀態</h4>
-                <div style="display:flex; justify-content:center; align-items:center;">
-                    <button id="base-2" class="base-btn" onclick="window.toggleBase('second')"></button>
-                </div>
-                <div style="display:flex; justify-content:center; align-items:center;">
-                    <button id="base-3" class="base-btn" onclick="window.toggleBase('third')"></button>
-                    <button id="base-1" class="base-btn" onclick="window.toggleBase('first')"></button>
-                </div>
+<div id="controller-view">
+    <div class="advanced-section">
+        <div class="panel title-panel">
+            <h3 onclick="toggleGameSort()" style="cursor:pointer;" title="點擊切換 新->舊 / 舊->新">🏆 進行中/已建立賽事 ↕️</h3>
+            <div class="input-row">
+                <input type="text" id="title-input" placeholder="例如：黑豹旗全國高中棒球大賽">
+                <button class="btn-action" onclick="updateTitle()">更新標題</button>
             </div>
         </div>
-
-        <div class="controller-box" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-            <div style="background:#f4f4f4; padding:15px; border-radius:10px;">
-                <h4>目前投手設定</h4>
-                <div style="margin-bottom:10px;">
-                    <select id="sel-pitcher-team" style="padding:5px;" onchange="window.updatePlayerSelect('pitcher')">
-                        <option value="away">客隊</option><option value="home" selected>主隊</option>
-                    </select>
-                    <select id="sel-pitcher-idx" style="padding:5px;" onchange="window.setPlayer('pitcher')"></select>
-                </div>
-                <div style="font-size:18px; font-weight:bold;">投球數: <span id="ctrl-pitch-count">0</span></div>
-                <button onclick="window.updatePitchCount(1)" style="padding:5px 15px;">+1</button>
-                <button onclick="window.updatePitchCount(-1)" style="padding:5px 15px;">-1</button>
-                <button onclick="window.updatePitchCount(0)" style="padding:5px 15px; background:#888; color:white;">歸零</button>
+        <div class="panel">
+            <h3>TAG One Radar 測速整合</h3>
+            <input type="number" id="speedInput" placeholder="輸入球速 (km/h)">
+            <button class="btn-action" onclick="updateSpeed()">發送球速</button>
+        </div>
+    </div>
+    <div class="camerafi-control-bar">
+        <div class="team-section">
+            <div class="team-col">
+                <input type="text" class="team-name-input" id="away-name" value="客隊" onchange="updateTeam('away')">
+                <button class="btn-score" onclick="updateScore('away', 1)">+1</button>
+                <button class="btn-score" onclick="updateScore('away', -1)">-1</button>
             </div>
-            <div style="background:#f4f4f4; padding:15px; border-radius:10px;">
-                <h4>目前打者設定</h4>
-                <div style="margin-bottom:10px;">
-                    <select id="sel-batter-team" style="padding:5px;" onchange="window.updatePlayerSelect('batter')">
-                        <option value="away" selected>客隊</option><option value="home">主隊</option>
-                    </select>
-                    <select id="sel-batter-idx" style="padding:5px;" onchange="window.setPlayer('batter')"></select>
+            <div class="team-col">
+                <input type="text" class="team-name-input" id="home-name" value="主隊" onchange="updateTeam('home')">
+                <button class="btn-score" onclick="updateScore('home', 1)">+1</button>
+                <button class="btn-score" onclick="updateScore('home', -1)">-1</button>
+            </div>
+        </div>
+        <div class="inning-col">
+            <div class="section-title">Inning</div>
+            <div class="inning-display"><span id="ctrl-inning">1</span><span id="ctrl-half" class="arrow-up">▲</span></div>
+            <div class="inning-nav">
+                <button class="btn-nav" id="btn-prev-inning" onclick="stepInning('prev')">&lt;</button>
+                <button class="btn-nav" onclick="stepInning('next')">&gt;</button>
+            </div>
+        </div>
+        <div class="base-col">
+            <div class="section-title">Base</div>
+            <div class="bases-container">
+                <div class="base-diamond" id="ctrl-base-2" onclick="toggleBase('second')"></div>
+                <div class="base-diamond" id="ctrl-base-3" onclick="toggleBase('third')"></div>
+                <div class="base-diamond" id="ctrl-base-1" onclick="toggleBase('first')"></div>
+            </div>
+        </div>
+        <div class="count-col">
+            <div class="section-title">Count</div>
+            <div class="count-row" onclick="updateCount('balls', 1)">
+                <div class="count-label">B</div><div class="dot" id="ctrl-b1"></div><div class="dot" id="ctrl-b2"></div><div class="dot" id="ctrl-b3"></div>
+            </div>
+            <div class="count-row" onclick="updateCount('strikes', 1)">
+                <div class="count-label">S</div><div class="dot" id="ctrl-s1"></div><div class="dot" id="ctrl-s2"></div>
+            </div>
+            <div class="count-row" style="cursor: default;">
+                <div class="out-click-area" onclick="updateCount('outs', 1)">
+                    <div class="count-label">O</div><div class="dot" id="ctrl-o1"></div><div class="dot" id="ctrl-o2"></div>
                 </div>
-                <div id="batter-stats-panel" style="font-size:14px; background:white; padding:8px; border-radius:4px;">
-                    打擊紀錄: <span id="ctrl-batter-h">0</span> 安打 / <span id="ctrl-batter-ab">0</span> 打數
-                    <div style="margin-top:5px;">
-                        <button onclick="window.updateBatterStat('H', 1)">+安打</button>
-                        <button onclick="window.updateBatterStat('H', -1)">-安打</button>
-                        <button onclick="window.updateBatterStat('AB', 1)" style="margin-left:10px;">+打數</button>
-                        <button onclick="window.updateBatterStat('AB', -1)">-打數</button>
-                    </div>
+                <button class="btn-cs" onclick="resetCount()">cs</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Pitch Count (投手用球數手動微調)</h3>
+        <div style="display: flex; justify-content: space-around; align-items: center;">
+            <div style="text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 8px; color: #333;">客隊投手 (<span id="ctrl-away-pc" style="color: #e74c3c; font-size: 20px;">0</span>)</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="updatePitchCount('away', -1)" style="padding: 8px 15px; background: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer;">-1</button>
+                    <button onclick="updatePitchCount('away', 1)" style="padding: 8px 15px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer;">+1 (界外/敬遠)</button>
+                    <button onclick="resetPitchCount('away')" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">歸零</button>
+                </div>
+            </div>
+            <div style="width: 2px; height: 50px; background: #ccc;"></div>
+            <div style="text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 8px; color: #333;">主隊投手 (<span id="ctrl-home-pc" style="color: #e74c3c; font-size: 20px;">0</span>)</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="updatePitchCount('home', -1)" style="padding: 8px 15px; background: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer;">-1</button>
+                    <button onclick="updatePitchCount('home', 1)" style="padding: 8px 15px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer;">+1 (界外/敬遠)</button>
+                    <button onclick="resetPitchCount('home')" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">歸零</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, get, child, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    <div class="player-info-container">
+        <div class="player-header-bar">
+            <h2 style="margin: 0; font-size: 22px;">Player Info</h2>
+            <label class="dh-toggle-label">
+                Include pitcher in the batter line
+                <label class="switch">
+                    <input type="checkbox" id="dh-toggle" onchange="updateGlobalDH(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
 
-        // 1. Firebase 配置 (請在此填入您的真實金鑰)
+        <div class="teams-lineup-grid">
+            <div class="lineup-panel" id="away-panel">
+                <div class="team-roster-header">
+                    <h3 id="away-lineup-title">客隊</h3>
+                    <button class="btn-edit-roster" onclick="openRosterModal('away')">Player list (25人)</button>
+                </div>
+                <div class="pitcher-row">
+                    <div class="pitcher-info"><span class="pitcher-label">Pitcher</span><span class="pitcher-name" id="away-p-name">--</span><span class="pitcher-number" id="away-p-num">--</span></div>
+                    <button class="btn-edit-roster" onclick="openPitcherModal('away')">Change pitcher</button>
+                </div>
+                <table class="lineup-table">
+                    <thead><tr><th width="10%">BO</th><th width="35%">Name</th><th width="25%">Position</th><th width="10%" style="text-align: center;">Change</th><th width="20%" style="text-align: center;">At Bat</th></tr></thead>
+                    <tbody id="away-lineup-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="lineup-panel" id="home-panel">
+                <div class="team-roster-header">
+                    <h3 id="home-lineup-title">主隊</h3>
+                    <button class="btn-edit-roster" onclick="openRosterModal('home')">Player list (25人)</button>
+                </div>
+                <div class="pitcher-row">
+                    <div class="pitcher-info"><span class="pitcher-label">Pitcher</span><span class="pitcher-name" id="home-p-name">--</span><span class="pitcher-number" id="home-p-num">--</span></div>
+                    <button class="btn-edit-roster" onclick="openPitcherModal('home')">Change pitcher</button>
+                </div>
+                <table class="lineup-table">
+                    <thead><tr><th width="10%">BO</th><th width="35%">Name</th><th width="25%">Position</th><th width="10%" style="text-align: center;">Change</th><th width="20%" style="text-align: center;">At Bat</th></tr></thead>
+                    <tbody id="home-lineup-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="batter-result-panel">
+        <div class="result-header">
+            <div class="current-batter-display">
+                目前打者：
+                <span class="batter-badge" id="result-team-badge">無</span>
+                <span id="result-batter-name" style="color: #888;">請由上方打線表選擇「打擊 🏏」</span>
+            </div>
+            <div class="manual-edit-group">
+                H: <input type="number" id="manual-h" value="0" min="0">
+                AB: <input type="number" id="manual-ab" value="0" min="0">
+                <button class="btn-manual-save" onclick="saveManualStats()">儲存</button>
+            </div>
+        </div>
+        
+        <div class="result-categories">
+            <div class="category-col">
+                <div class="category-title">OUT</div>
+                <div class="btn-grid">
+                    <button class="btn-result btn-out" onclick="recordResult('SO')">SO</button>
+                    <button class="btn-result btn-out" onclick="recordResult('N.O')">N.O</button>
+                    <button class="btn-result btn-out" onclick="recordResult('GO')">GO</button>
+                    <button class="btn-result btn-out" onclick="recordResult('FO')">FO</button>
+                </div>
+            </div>
+            <div class="category-col">
+                <div class="category-title">HIT</div>
+                <div class="btn-grid">
+                    <button class="btn-result btn-hit" onclick="recordResult('1B')">1B</button>
+                    <button class="btn-result btn-hit" onclick="recordResult('2B')">2B</button>
+                    <button class="btn-result btn-hit" onclick="recordResult('3B')">3B</button>
+                    <button class="btn-result btn-hit" onclick="recordResult('HR')">HR</button>
+                </div>
+            </div>
+            <div class="category-col">
+                <div class="category-title">OBP</div>
+                <div class="btn-grid">
+                    <button class="btn-result btn-obp" onclick="recordResult('E')">E</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('BB')">BB</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('HBP')">HBP</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('IBB')">IBB</button>
+                </div>
+            </div>
+            <div class="category-col">
+                <div class="category-title">ETC</div>
+                <div class="btn-grid">
+                    <button class="btn-result btn-etc" onclick="recordResult('SB')">SB</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('GDP')">GDP</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('SH')">SH</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('FC')">FC</button>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">* 點擊除盜壘(SB)外的結果，系統將會自動結算安打/打數，並自動清空 BSO 球數。</div>
+    </div>
+
+    
+
+<div class="modal-overlay" id="roster-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="roster-modal-title">編輯球員名單</h3>
+            <button class="btn-close" onclick="closeModal('roster-modal')">&times;</button>
+        </div>
+        <div class="roster-edit-row" style="border-bottom: 2px solid #333; padding-bottom: 5px;">
+            <div>背號</div><div>姓名</div><div>H(安)</div><div>AB(數)</div>
+        </div>
+        <div id="roster-inputs-container"></div>
+        <button class="btn-save-modal" onclick="saveRoster()">儲存名單</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="pitcher-modal">
+    <div class="modal-content" style="max-width: 300px;">
+        <div class="modal-header">
+            <h3>選擇投手</h3>
+            <button class="btn-close" onclick="closeModal('pitcher-modal')">&times;</button>
+        </div>
+        <select id="pitcher-select" style="width: 100%; padding: 10px; font-size: 16px; margin-bottom: 20px;"></select>
+        <button class="btn-save-modal" onclick="savePitcher()">確認更換</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="lib-roster-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="lib-roster-modal-title">編輯資料庫隊伍名單</h3>
+            <button class="btn-close" onclick="closeModal('lib-roster-modal')">&times;</button>
+        </div>
+        <div style="font-size: 12px; color: #888; margin-bottom: 10px;">請預先輸入背號與姓名</div>
+        <div class="lib-roster-row" style="border-bottom: 2px solid #333; padding-bottom: 5px; font-weight: bold; text-align: center;">
+            <div>背號</div><div>姓名</div>
+        </div>
+        <div id="lib-roster-inputs-container"></div>
+        <button class="btn-save-modal" onclick="saveLibraryRoster()">儲存至資料庫</button>
+    </div>
+</div>
+
+<script type="module">
+  // 修改：加入 firebase-auth.js 的 import
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, set, get, child, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  // TODO: 貼上您的 Firebase Config
   const firebaseConfig = {
   apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
   authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
@@ -339,231 +567,670 @@
   appId: "1:179359096477:web:8188f897371651442e7e74"
   };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const dbRef = ref(db);
-        const auth = getAuth(app);
-        const urlParams = new URLSearchParams(window.location.search);
-        let gameId = urlParams.get('gameId');
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db);
+  const auth = getAuth(app); // 新增：初始化 Auth
 
-        // 格式化日期：2026/04/27 01:30
-        const formatDate = (ts) => {
-            const date = new Date(parseInt(ts.split('_')[1]) || Date.now());
-            return `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
-        };
+    function formatTimestamp(timestamp) {
+    if (!timestamp) return "無日期";
 
-        // ==========================================
-        // 🔒 權限監聽與畫面切換
-        // ==========================================
-        onAuthStateChanged(auth, (user) => {
-            const views = { login: 'login-view', home: 'home-view', controller: 'controller-view', nav: 'top-nav', editor: 'roster-editor-view' };
-            const hideAll = () => Object.values(views).forEach(id => { const el = document.getElementById(id); if(el) el.style.display='none'; });
+    if (typeof timestamp === "string" && !timestamp.match(/^\d+$/)) {
+        return timestamp;
+    }
 
-            if (user) {
-                hideAll();
-                if (gameId) {
-                    document.getElementById(views.controller).style.display = 'block';
-                    document.getElementById(views.nav).style.display = 'flex';
-                    initControllerLogic();
-                } else {
-                    document.getElementById(views.home).style.display = 'block';
-                    startLobbyListeners();
-                }
-            } else {
-                hideAll();
-                document.getElementById(views.login).style.display = 'flex';
-            }
-        });
+    const date = new Date(Number(timestamp));
 
-        // ==========================================
-        // 🏠 大廳監聽：自動帶入舊資料
-        // ==========================================
-        function startLobbyListeners() {
-            // 監聽賽事列表
-            onValue(ref(db, 'games'), (snapshot) => {
-                const container = document.getElementById('recent-games-list');
-                if (!container) return;
-                const games = snapshot.val() || {};
-                let html = `<div class="table-header game-grid"><div>賽事標題</div><div>建立日期</div><div style="text-align:center;">操作</div></div>`;
-                const sortedIds = Object.keys(games).sort((a, b) => b.split('_')[1] - a.split('_')[1]);
-                sortedIds.forEach(id => {
-                    html += `<div class="table-row game-grid">
-                        <div class="col-name">${games[id].title}</div>
-                        <div style="font-size:13px; color:#666;">${formatDate(id)}</div>
-                        <div style="text-align:center;">
-                            <button onclick="location.href=window.location.pathname+'?gameId=${id}'" class="btn-blue">控制</button>
-                            <button onclick="window.deleteGame('${id}', '${games[id].title}')" class="btn-red">刪除</button>
+    if (isNaN(date.getTime())) return "無日期";
+
+    return date.toLocaleString("zh-TW");
+    }
+    // ===== 排序控制 =====
+let teamSortDesc = true;
+let gameSortDesc = true;
+
+function sortByCreatedAt(obj, desc = true) {
+    return Object.entries(obj).sort((a, b) => {
+        return desc
+            ? (b[1].createdAt || 0) - (a[1].createdAt || 0)
+            : (a[1].createdAt || 0) - (b[1].createdAt || 0);
+    });
+}
+
+window.toggleTeamSort = () => {
+    teamSortDesc = !teamSortDesc;
+    initHomeView();
+};
+
+window.toggleGameSort = () => {
+    gameSortDesc = !gameSortDesc;
+    initHomeView();
+};
+
+  // ================= 新增：登入與權限管理邏輯 =================
+  
+  // 綁定登入按鈕事件
+  document.getElementById('login-btn').addEventListener('click', async () => {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('login-error');
+      errorDiv.innerText = '登入中...';
+      try {
+          await signInWithEmailAndPassword(auth, email, pass);
+      } catch (e) {
+          errorDiv.innerText = '登入失敗：' + e.message;
+      }
+  });
+
+  // 全域登出函數
+  window.handleLogout = () => {
+      signOut(auth).then(() => {
+          window.location.href = 'control.html'; 
+      });
+  };
+
+  // Auth Guard 監聽登入狀態
+  onAuthStateChanged(auth, (user) => {
+      if (user) {
+          // 登入成功：隱藏登入層，並啟動原本的程式
+          document.getElementById('login-overlay').style.display = 'none';
+          initApp();
+      } else {
+          // 未登入：顯示登入層，隱藏所有其他介面
+          document.getElementById('login-overlay').style.display = 'flex';
+          document.getElementById('home-view').style.display = 'none';
+          document.getElementById('controller-view').style.display = 'none';
+          document.getElementById('top-nav').style.display = 'none';
+      }
+  });
+
+
+  // ================= 路由與初始化架構 =================
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get('gameId');
+  
+  // 決定 Firebase 寫入的基準路徑
+  let basePath = 'scoreboard'; 
+  if (gameId) basePath = `games/${gameId}`;
+
+  let localState = { isTop: true, rosters: {}, lineups: { includePitcher: false, away: {}, home: {} }, currentBatter: null, teamNames: {away: '客隊', home: '主隊'} };
+  let currentEditingTeam = null;
+  let currentEditingLibTeamId = null; // 用於首頁編輯資料庫隊伍
+
+  // 將原本直接執行的邏輯，包裝到 initApp 中，等待登入後才執行
+  function initApp() {
+      // 畫面切換控制
+      if (gameId || urlParams.has('legacy')) {
+          // 顯示轉播控制台
+          document.getElementById('home-view').style.display = 'none';
+          document.getElementById('controller-view').style.display = 'block';
+          document.getElementById('top-nav').style.display = 'flex';
+          
+          // 設定導覽列連結
+          document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId || 'scoreboard'}`;
+          
+          initController();
+      } else {
+          // 顯示首頁大廳
+          document.getElementById('home-view').style.display = 'block';
+          document.getElementById('controller-view').style.display = 'none';
+          initHomeView();
+      }
+  }
+  
+
+  // ================= 視圖 1: 首頁大廳邏輯 =================
+  function initHomeView() {
+      // 監聽隊伍資料庫
+      onValue(ref(db, 'library_teams'), (snapshot) => {
+          const teams = snapshot.val() || {};
+          const listEl = document.getElementById('lib-teams-list');
+          const selAway = document.getElementById('new-game-away');
+          const selHome = document.getElementById('new-game-home');
+          
+          listEl.innerHTML = '';
+          selAway.innerHTML = '<option value="">-- 選擇客隊 --</option>';
+          selHome.innerHTML = '<option value="">-- 選擇主隊 --</option>';
+          
+          const sortedTeams = sortByCreatedAt(teams, teamSortDesc);
+                sortedTeams.forEach(([id, team]) => {
+              // 隊伍列表
+              listEl.innerHTML += `
+                  <div class="list-item">
+                    <div>
+                        <strong>${team.name}</strong>
+                        <div style="font-size:13px; color:#666; margin-top:6px;">
+                            建立日期：${formatTimestamp(team.createdAt)}
                         </div>
-                    </div>`;
-                });
-                container.innerHTML = html;
-            });
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                    <button class="btn-outline"
+                        onclick="openLibraryRosterModal('${id}', '${team.name}')">
+                        編輯名單
+                    </button>
 
-            // 監聽隊伍列表
-            onValue(ref(db, 'library_teams'), (snapshot) => {
-                const container = document.getElementById('teams-list');
-                const awaySel = document.getElementById('new-game-away');
-                const homeSel = document.getElementById('new-game-home');
-                const teams = snapshot.val() || {};
-                
-                if (awaySel) awaySel.innerHTML = '<option value="">選擇客隊</option>';
-                if (homeSel) homeSel.innerHTML = '<option value="">選擇主隊</option>';
-                
-                let html = `<div class="table-header team-grid"><div>隊伍名稱</div><div>建立日期</div><div style="text-align:center;">操作</div></div>`;
-                const sortedIds = Object.keys(teams).sort((a, b) => b.split('_')[1] - a.split('_')[1]);
-                sortedIds.forEach(id => {
-                    const t = teams[id];
-                    html += `<div class="table-row team-grid">
-                        <div class="col-name">${t.name}</div>
-                        <div style="font-size:13px; color:#666;">${formatDate(id)}</div>
-                        <div style="text-align:center;">
-                            <button onclick="window.editRoster('${id}')" class="btn-blue">編輯</button>
-                            <button onclick="window.deleteTeam('${id}', '${t.name}')" class="btn-red">刪除</button>
-                        </div>
-                    </div>`;
-                    if(awaySel) awaySel.innerHTML += `<option value="${id}">${t.name}</option>`;
-                    if(homeSel) homeSel.innerHTML += `<option value="${id}">${t.name}</option>`;
-                });
-                if (container) container.innerHTML = html;
-            });
-        }
+                    <button class="btn-danger"
+                        onclick="deleteTeam('${id}', '${team.name}')">
+                        刪除
+                    </button>
+</div>
+</div>
+              `;
+              // 下拉選單
+              selAway.innerHTML += `<option value="${id}">${team.name}</option>`;
+              selHome.innerHTML += `<option value="${id}">${team.name}</option>`;
+          });
+      });
 
-        // ==========================================
-        // 🎮 全功能控制台邏輯 (完全復刻附件)
-        // ==========================================
-        let gameData = null;
-        function initControllerLogic() {
-            onValue(ref(db, `games/${gameId}`), (snapshot) => {
-                gameData = snapshot.val();
-                if (!gameData) return;
-                
-                // 更新介面數值
-                document.getElementById('ctrl-away-name').innerText = gameData.teams.away.name;
-                document.getElementById('ctrl-home-name').innerText = gameData.teams.home.name;
-                document.getElementById('display-away-score').innerText = gameData.teams.away.score;
-                document.getElementById('display-home-score').innerText = gameData.teams.home.score;
-                
-                // 更新壘包顏色
-                ['first', 'second', 'third'].forEach(b => {
-                    const el = document.getElementById(`base-${b==='first'?'1':b==='second'?'2':'3'}`);
-                    if(el) el.className = gameData.bases[b] ? 'base-btn active' : 'base-btn';
-                });
+      // 監聽賽事列表
+      onValue(ref(db, 'games'), (snapshot) => {
+          const games = snapshot.val() || {};
+          const listEl = document.getElementById('games-list');
+          listEl.innerHTML = '';
+          
+          // 若有舊版 scoreboard 也一併顯示為選項
+          listEl.innerHTML += `
+              <div class="list-item" style="border-left: 4px solid #f39c12;">
+                  <div><strong style="color: #f39c12;">舊版預設記分板 (Scoreboard)</strong></div>
+                  <div>
+                      <a href="control.html?legacy=true" class="btn-primary" style="text-decoration: none; margin-right: 5px;">進入控制台</a>
+                      <a href="overlay.html" target="_blank" class="btn-outline">開啟疊加</a>
+                  </div>
+              </div>
+          `;
 
-                // 更新投打顯示
-                const p = gameData.currentPitcher;
-                const b = gameData.currentBatter;
-                if(p) document.getElementById('ctrl-pitch-count').innerText = gameData.rosters[p.team][p.rosterIndex].pitchCount || 0;
-                if(b) {
-                    const batter = gameData.rosters[b.team][b.rosterIndex];
-                    document.getElementById('ctrl-batter-h').innerText = batter.H || 0;
-                    document.getElementById('ctrl-batter-ab').innerText = batter.AB || 0;
-                }
-            });
-            
-            // 初次載入下拉選單
-            setTimeout(() => { window.updatePlayerSelect('pitcher'); window.updatePlayerSelect('batter'); }, 1000);
-        }
+          const sortedGames = sortByCreatedAt(games, gameSortDesc);
 
-        window.updateScore = (team, val) => {
-            const current = gameData.teams[team].score;
-            update(ref(db, `games/${gameId}/teams/${team}`), { score: Math.max(0, current + val) });
-        };
+                sortedGames.forEach(([id, game]) => {
+              listEl.innerHTML += `
+                  <div class="list-item">
+    <div>
+        <strong>${game.title || '未命名賽事'}</strong>
+        <div style="font-size: 14px; color: #666;">
+            ${game.teams?.away?.name || '客隊'} vs ${game.teams?.home?.name || '主隊'}
+        </div>
+        <div style="font-size:13px; color:#888;">
+            ${formatTimestamp(game.createdAt)}
+        </div>
+    </div>
 
-        window.cycleCount = (type, max) => {
-            const next = (gameData.count[type] + 1) % max;
-            update(ref(db, `games/${gameId}/count`), { [type]: next });
-        };
+    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
 
-        window.resetCount = () => update(ref(db, `games/${gameId}/count`), { balls: 0, strikes: 0, outs: 0 });
+        <div style="display:flex; gap:6px;">
+            <a href="control.html?gameId=${id}" class="btn-primary">進入控制台</a>
+            <a href="overlay.html?gameId=${id}" target="_blank" class="btn-outline">
+                開啟疊加
+            </a>
+            <button class="btn-danger" onclick="deleteGame('${id}')">刪除</button>
+            </div>
 
-        window.toggleBase = (base) => update(ref(db, `games/${gameId}/bases`), { [base]: !gameData.bases[base] });
+        <div style="display:flex; gap:6px;">
+            <button class="btn-outline" onclick="copySpeedUrl('${id}')">
+                Speed URL
+            </button>
 
-        window.updatePlayerSelect = (type) => {
-            const team = document.getElementById(`sel-${type}-team`).value;
-            const sel = document.getElementById(`sel-${type}-idx`);
-            sel.innerHTML = '<option value="-1">選擇球員</option>';
-            const roster = gameData.rosters[team] || [];
-            roster.forEach((p, i) => { if(p.name) sel.innerHTML += `<option value="${i}">#${p.num} ${p.name}</option>`; });
-        };
+            <button class="btn-outline" onclick="copyOnlySpeedUrl('${id}')">
+                Only Speed URL
+            </button>
+        </div>
 
-        window.setPlayer = (type) => {
-            const team = document.getElementById(`sel-${type}-team`).value;
-            const idx = parseInt(document.getElementById(`sel-${type}-idx`).value);
-            update(ref(db, `games/${gameId}/current${type.charAt(0).toUpperCase() + type.slice(1)}`), { team, rosterIndex: idx });
-        };
+    </div>
+</div>
+              `;
+          });
+      });
+  }
 
-        window.updatePitchCount = (val) => {
-            const p = gameData.currentPitcher;
-            if(!p || p.rosterIndex === -1) return;
-            const current = gameData.rosters[p.team][p.rosterIndex].pitchCount || 0;
-            update(ref(db, `games/${gameId}/rosters/${p.team}/${p.rosterIndex}`), { pitchCount: val === 0 ? 0 : current + val });
-        };
+  // 首頁：新增資料庫隊伍
+  window.createLibraryTeam = () => {
+      const name = document.getElementById('new-lib-team-name').value;
+      if (!name) return alert("請輸入隊伍名稱");
+      const newTeamRef = push(ref(db, 'library_teams'));
+      // 初始化 25 個空位
+      let emptyRoster = Array(25).fill({ num: '', name: '', H: 0, AB: 0 });
+      set(newTeamRef, {
+    name: name,
+    roster: emptyRoster,
+    createdAt: Date.now()
+});
+      document.getElementById('new-lib-team-name').value = '';
+  };
 
-        window.updateBatterStat = (field, val) => {
-            const b = gameData.currentBatter;
-            if(!b || b.rosterIndex === -1) return;
-            const current = gameData.rosters[b.team][b.rosterIndex][field] || 0;
-            update(ref(db, `games/${gameId}/rosters/${b.team}/${b.rosterIndex}`), { [field]: Math.max(0, current + val) });
-        };
+  // 首頁：編輯資料庫隊伍名單
+  window.openLibraryRosterModal = async (teamId, teamName) => {
+      currentEditingLibTeamId = teamId;
+      document.getElementById('lib-roster-modal-title').innerText = `編輯隊伍：${teamName}`;
+      const snap = await get(child(dbRef, `library_teams/${teamId}/roster`));
+      const roster = snap.exists() ? snap.val() : [];
+      
+      const container = document.getElementById('lib-roster-inputs-container');
+      container.innerHTML = '';
+      for (let i = 0; i < 25; i++) {
+          const p = roster[i] || { num: '', name: '' };
+          container.innerHTML += `
+              <div class="lib-roster-row">
+                  <input type="number" id="lib-roster-num-${i}" placeholder="背號" value="${p.num}">
+                  <input type="text" id="lib-roster-name-${i}" placeholder="姓名" value="${p.name}">
+              </div>
+          `;
+      }
+      document.getElementById('lib-roster-modal').style.display = 'flex';
+  };
 
-        // ==========================================
-        // 🔑 核心功能掛載 (登入、刪除、建立)
-        // ==========================================
-        window.loginSystem = () => signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value).catch(e => alert("登入失敗"));
-        window.logoutSystem = () => signOut(auth).then(() => location.reload());
-        window.deleteGame = (id, name) => confirm(`確定刪除賽事「${name}」？`) && set(ref(db, `games/${id}`), null);
-        window.deleteTeam = (id, name) => confirm(`確定刪除球隊「${name}」？`) && set(ref(db, `library_teams/${id}`), null);
+  window.saveLibraryRoster = () => {
+      if(!currentEditingLibTeamId) return;
+      let newRoster = [];
+      for (let i = 0; i < 25; i++) {
+          newRoster.push({
+              num: document.getElementById(`lib-roster-num-${i}`).value,
+              name: document.getElementById(`lib-roster-name-${i}`).value,
+              H: 0, AB: 0 // 初始化成績
+          });
+      }
+      update(ref(db, `library_teams/${currentEditingLibTeamId}`), { roster: newRoster }).then(() => {
+          closeModal('lib-roster-modal');
+      });
+  };
 
-        window.createLibraryTeam = async () => {
-            const name = prompt("輸入球隊名稱:");
-            if (!name) return;
-            const id = 'team_' + Date.now();
-            await set(ref(db, `library_teams/${id}`), { name, roster: Array(25).fill({ name: "", num: "" }) });
-            window.editRoster(id);
-        };
+  // 首頁：快速建立比賽
+  window.createNewGame = async () => {
+      const title = document.getElementById('new-game-title').value;
+      const awayId = document.getElementById('new-game-away').value;
+      const homeId = document.getElementById('new-game-home').value;
+      
+      if(!title || !awayId || !homeId) return alert('請填寫完整：賽事標題、客隊、主隊');
 
-        window.editRoster = async (id) => {
-            const team = (await get(child(dbRef, `library_teams/${id}`))).val();
-            document.getElementById('home-view').style.display = 'none';
-            document.getElementById('roster-editor-view').style.display = 'block';
-            document.getElementById('edit-team-name').innerText = `編輯: ${team.name}`;
-            const list = document.getElementById('roster-input-list');
-            list.innerHTML = '';
-            for(let i=0; i<25; i++) {
-                const p = (team.roster && team.roster[i]) ? team.roster[i] : { name: "", num: "" };
-                list.innerHTML += `<div style="display:flex;gap:5px;background:#eee;padding:5px;border-radius:4px;">
-                    <span style="width:20px;">${i+1}</span>
-                    <input id="p-n-${i}" value="${p.name}" placeholder="姓名" style="width:60%;">
-                    <input id="p-m-${i}" value="${p.num}" placeholder="背號" style="width:30%;">
-                </div>`;
-            }
-            window.saveCurrentRoster = async () => {
-                const ros = [];
-                for(let i=0; i<25; i++) ros.push({ name: document.getElementById(`p-n-${i}`).value, num: document.getElementById(`p-m-${i}`).value });
-                await update(ref(db, `library_teams/${id}`), { roster: ros });
-                location.reload();
-            };
-        };
+      // 取得兩隊資料庫資料
+      const awaySnap = await get(child(dbRef, `library_teams/${awayId}`));
+      const homeSnap = await get(child(dbRef, `library_teams/${homeId}`));
+      
+      const awayData = awaySnap.val();
+      const homeData = homeSnap.val();
 
-        window.createNewGame = async () => {
-            const title = document.getElementById('new-game-title').value;
-            const aId = document.getElementById('new-game-away').value;
-            const hId = document.getElementById('new-game-home').value;
-            if(!title || !aId || !hId) return alert("請選填完整資訊");
-            const aData = (await get(child(dbRef, `library_teams/${aId}`))).val();
-            const hData = (await get(child(dbRef, `library_teams/${hId}`))).val();
-            const newId = 'game_' + Date.now();
-            await set(ref(db, `games/${newId}`), {
-                title, teams: { away: { name: aData.name, score: 0 }, home: { name: hData.name, score: 0 } },
-                rosters: { away: aData.roster, home: hData.roster },
-                gameInfo: { inning: 1, isTop: true },
-                count: { balls: 0, strikes: 0, outs: 0 },
-                bases: { first: false, second: false, third: false },
-                currentPitcher: { team: 'home', rosterIndex: -1 },
-                currentBatter: { team: 'away', rosterIndex: -1 }
-            });
-            window.location.href = window.location.pathname + `?gameId=${newId}`;
-        };
-    </script>
+      // 生成新比賽 ID
+      const newGameId = 'game_' + Date.now();
+      
+      // 構建比賽初始結構
+      const initGameData = {
+          title: title,
+          createdAt: Date.now(),
+          teams: {
+              away: { name: awayData.name, score: 0 },
+              home: { name: homeData.name, score: 0 }
+          },
+          rosters: {
+              away: awayData.roster || Array(25).fill({num:'', name:'', H:0, AB:0}),
+              home: homeData.roster || Array(25).fill({num:'', name:'', H:0, AB:0})
+          },
+          gameInfo: { inning: 1, isTop: true },
+          count: { balls: 0, strikes: 0, outs: 0 },
+          bases: { first: false, second: false, third: false },
+          pitchCount: { away: 0, home: 0 },
+          lineups: { includePitcher: false, away: {}, home: {} }
+      };
+
+      await set(ref(db, `games/${newGameId}`), initGameData);
+      
+      // 跳轉至該場比賽的控制台
+      window.location.href = `control.html?gameId=${newGameId}`;
+  };
+
+
+  // ================= 視圖 2: 轉播控制台邏輯 (全面改用 basePath) =================
+  const positions = ["", "P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "PH", "PR"];
+
+  function initController() {
+      onValue(ref(db, basePath), (snapshot) => {
+          const data = snapshot.val();
+          if(!data) return;
+
+          if(data.title !== undefined) {
+              document.getElementById('title-input').value = data.title;
+              document.getElementById('nav-game-title').innerText = `控制台 - ${data.title}`;
+          }
+          if(data.teams) {
+              localState.teamNames.away = data.teams.away.name || '客隊';
+              localState.teamNames.home = data.teams.home.name || '主隊';
+              document.getElementById('away-name').value = localState.teamNames.away;
+              document.getElementById('home-name').value = localState.teamNames.home;
+              document.getElementById('away-lineup-title').innerText = localState.teamNames.away;
+              document.getElementById('home-lineup-title').innerText = localState.teamNames.home;
+          }
+          if(data.gameInfo) {
+              localState.isTop = data.gameInfo.isTop;
+              document.getElementById('ctrl-inning').innerText = data.gameInfo.inning;
+              const halfEl = document.getElementById('ctrl-half');
+              halfEl.innerText = '▲'; halfEl.className = data.gameInfo.isTop ? 'arrow-up' : 'arrow-down';
+          }
+          if(data.bases) {
+              document.getElementById('ctrl-base-1').className = `base-diamond ${data.bases.first ? 'active' : ''}`;
+              document.getElementById('ctrl-base-2').className = `base-diamond ${data.bases.second ? 'active' : ''}`;
+              document.getElementById('ctrl-base-3').className = `base-diamond ${data.bases.third ? 'active' : ''}`;
+          }
+          if(data.count) {
+              for(let i=1; i<=3; i++) document.getElementById(`ctrl-b${i}`).className = `dot ${data.count.balls >= i ? 'b-active' : ''}`;
+              for(let i=1; i<=2; i++) document.getElementById(`ctrl-s${i}`).className = `dot ${data.count.strikes >= i ? 's-active' : ''}`;
+              for(let i=1; i<=2; i++) document.getElementById(`ctrl-o${i}`).className = `dot ${data.count.outs >= i ? 'o-active' : ''}`;
+          }
+          if(data.pitchCount) {
+              document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0;
+              document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0;
+          }
+
+          localState.rosters = data.rosters || {};
+          localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} };
+          localState.currentBatter = data.currentBatter || null;
+          document.getElementById('dh-toggle').checked = localState.lineups.includePitcher || false;
+          
+          renderAllLineups();
+          updateBatterPanelDisplay();
+      });
+  }
+
+  function updateBatterPanelDisplay() {
+      const cb = localState.currentBatter;
+      const displayEl = document.getElementById('result-batter-name');
+      const badgeEl = document.getElementById('result-team-badge');
+      const inputH = document.getElementById('manual-h');
+      const inputAB = document.getElementById('manual-ab');
+
+      if (cb && cb.team && cb.rosterIndex !== -1) {
+          const player = localState.rosters[cb.team]?.[cb.rosterIndex];
+          if (player) {
+              badgeEl.innerText = localState.teamNames[cb.team];
+              badgeEl.style.backgroundColor = cb.team === 'away' ? '#3498db' : '#9b59b6';
+              displayEl.innerText = `${player.num} ${player.name}`;
+              displayEl.style.color = '#2c3e50';
+              inputH.value = player.H || 0;
+              inputAB.value = player.AB || 0;
+              return;
+          }
+      }
+      badgeEl.innerText = "無";
+      badgeEl.style.backgroundColor = "#95a5a6";
+      displayEl.innerText = "請由上方打線表選擇「打擊 🏏」";
+      displayEl.style.color = "#888";
+      inputH.value = 0; inputAB.value = 0;
+  }
+
+  // 核心操作 (替換為 basePath)
+  window.setBatting = (team, rosterIndex) => update(ref(db, basePath), { currentBatter: { team: team, rosterIndex: parseInt(rosterIndex) } });
+
+  window.saveManualStats = () => {
+      if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請先設定打者');
+      const { team, rosterIndex } = localState.currentBatter;
+      const h = parseInt(document.getElementById('manual-h').value) || 0;
+      const ab = parseInt(document.getElementById('manual-ab').value) || 0;
+      update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
+  };
+
+  window.recordResult = async (type) => {
+      if (!localState.currentBatter || localState.currentBatter.rosterIndex === -1) return alert('請先從上方打線表設定目前打者！');
+      const { team, rosterIndex } = localState.currentBatter;
+      const playerRef = child(dbRef, `${basePath}/rosters/${team}/${rosterIndex}`);
+      const snap = await get(playerRef);
+      if (!snap.exists()) return;
+      
+      let p = snap.val(); let h = parseInt(p.H) || 0; let ab = parseInt(p.AB) || 0;
+      const isHit = ['1B','2B','3B','HR'].includes(type);
+      const isOut = ['SO','GO','FO','N.O','GDP','FC'].includes(type); 
+      const isError = type === 'E'; 
+
+      if (isHit) { h++; ab++; }
+      if (isOut || isError) { ab++; }
+      
+      await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
+      if (type !== 'SB') resetCount();
+  };
+
+  function renderAllLineups() {
+      ['away', 'home'].forEach(team => {
+          const roster = localState.rosters[team] || {};
+          const lineup = localState.lineups[team] || {};
+          let pName = "--", pNum = "--";
+          if (lineup.pitcherIndex !== undefined && roster[lineup.pitcherIndex]) { pName = roster[lineup.pitcherIndex].name || "(未命名)"; pNum = roster[lineup.pitcherIndex].num || "-"; }
+          document.getElementById(`${team}-p-name`).innerText = pName;
+          document.getElementById(`${team}-p-num`).innerText = pNum;
+
+          const tbody = document.getElementById(`${team}-lineup-tbody`);
+          tbody.innerHTML = '';
+          const batters = lineup.batters || {};
+          const usedRosterIndices = new Set();
+          for(let i = 0; i < 9; i++) { if (batters[i] && batters[i].rosterIndex !== undefined && batters[i].rosterIndex != -1) usedRosterIndices.add(parseInt(batters[i].rosterIndex)); }
+
+          for(let index = 0; index < 9; index++) {
+              const batter = batters[index] || { rosterIndex: -1, pos: '' };
+              const tr = document.createElement('tr');
+              tr.className = 'draggable-row'; tr.draggable = true; tr.dataset.team = team; tr.dataset.index = index;
+              tr.addEventListener('dragstart', handleDragStart); tr.addEventListener('dragover', handleDragOver); tr.addEventListener('dragleave', handleDragLeave); tr.addEventListener('drop', handleDrop);
+
+              let rosterOptions = `<option value="-1">-- 空缺 --</option>`;
+              for (let rIdx = 0; rIdx < 25; rIdx++) {
+                  const player = roster[rIdx];
+                  if (player && (player.name || player.num)) {
+                      if (usedRosterIndices.has(rIdx) && batter.rosterIndex != rIdx) continue; 
+                      const selected = batter.rosterIndex == rIdx ? 'selected' : '';
+                      rosterOptions += `<option value="${rIdx}" ${selected}>${player.num} ${player.name}</option>`;
+                  }
+              }
+
+              let posOptions = '';
+              positions.forEach(pos => { const selected = batter.pos === pos ? 'selected' : ''; posOptions += `<option value="${pos}" ${selected}>${pos}</option>`; });
+
+              const isCurrentBatter = (localState.currentBatter?.team === team && localState.currentBatter?.rosterIndex == batter.rosterIndex && batter.rosterIndex != -1);
+              const btnClass = isCurrentBatter ? 'btn-set-batter active' : 'btn-set-batter';
+              const btnText = isCurrentBatter ? '打擊中' : '打擊 🏏';
+
+              tr.innerHTML = `
+                  <td style="font-weight: bold; text-align: center;">${index + 1}</td>
+                  <td><select class="player-select" onchange="updateLineupPlayer('${team}', ${index}, this.value)">${rosterOptions}</select></td>
+                  <td><select class="pos-select" onchange="updateLineupPos('${team}', ${index}, this.value)">${posOptions}</select></td>
+                  <td class="drag-handle" title="按住拖曳排序">⇄</td>
+                  <td style="text-align: center;"><button class="${btnClass}" onclick="setBatting('${team}', ${batter.rosterIndex})" ${batter.rosterIndex == -1 ? 'disabled' : ''}>${btnText}</button></td>
+              `;
+              tbody.appendChild(tr);
+          }
+      });
+  }
+
+  // 以下所有的 API 路徑全部改為 basePath
+  window.updatePitchCount = async (team, value) => {
+      const pcSnap = await get(child(dbRef, `${basePath}/pitchCount/${team}`));
+      update(ref(db, `${basePath}/pitchCount`), { [team]: Math.max(0, (pcSnap.exists() ? pcSnap.val() : 0) + value) });
+  };
+  window.resetPitchCount = (team) => update(ref(db, `${basePath}/pitchCount`), { [team]: 0 });
+
+  window.updateGlobalDH = (isChecked) => {
+      update(ref(db, `${basePath}/lineups`), { includePitcher: isChecked });
+      ['away', 'home'].forEach(team => {
+          const lineup = localState.lineups[team] || {};
+          const pIdx = lineup.pitcherIndex !== undefined ? lineup.pitcherIndex : -1;
+          let batters = [];
+          for(let i = 0; i < 9; i++) batters.push(lineup.batters?.[i] || { rosterIndex: -1, pos: '' });
+          let changed = false;
+
+          if (!isChecked) {
+              for (let i = 0; i < 9; i++) { if ((pIdx !== -1 && batters[i].rosterIndex == pIdx) || batters[i].pos === 'P') { batters[i] = { rosterIndex: -1, pos: '' }; changed = true; } }
+          } else {
+              if (pIdx !== -1) {
+                  let alreadyIn = false, emptyIdx = -1, dhIdx = -1;
+                  for (let i = 0; i < 9; i++) {
+                      if (batters[i].rosterIndex == pIdx) alreadyIn = true;
+                      if (batters[i].pos === 'DH') dhIdx = i;
+                      if (batters[i].rosterIndex == -1 && emptyIdx === -1) emptyIdx = i;
+                  }
+                  if (!alreadyIn) {
+                      let targetIdx = dhIdx !== -1 ? dhIdx : emptyIdx;
+                      if (targetIdx !== -1) { batters[targetIdx] = { rosterIndex: pIdx, pos: 'P' }; changed = true; }
+                  } else {
+                      for (let i = 0; i < 9; i++) { if (batters[i].rosterIndex == pIdx && batters[i].pos !== 'P') { batters[i].pos = 'P'; changed = true; } }
+                  }
+              }
+          }
+          if (changed) set(ref(db, `${basePath}/lineups/${team}/batters`), batters);
+      });
+  };
+
+  window.openRosterModal = (team) => {
+      currentEditingTeam = team;
+      document.getElementById('roster-modal-title').innerText = team === 'away' ? '編輯客隊名單' : '編輯主隊名單';
+      const container = document.getElementById('roster-inputs-container');
+      container.innerHTML = '';
+      const roster = localState.rosters[team] || {};
+      for (let i = 0; i < 25; i++) {
+          const p = roster[i] || { num: '', name: '', H: 0, AB: 0 };
+          container.innerHTML += `
+              <div class="roster-edit-row">
+                  <input type="number" id="roster-num-${i}" placeholder="背號" value="${p.num}">
+                  <input type="text" id="roster-name-${i}" placeholder="姓名" value="${p.name}">
+                  <input type="number" id="roster-h-${i}" value="${p.H || 0}" min="0">
+                  <input type="number" id="roster-ab-${i}" value="${p.AB || 0}" min="0">
+              </div>
+          `;
+      }
+      document.getElementById('roster-modal').style.display = 'flex';
+  };
+
+  window.saveRoster = () => {
+      if(!currentEditingTeam) return;
+      let newRoster = [];
+      for (let i = 0; i < 25; i++) {
+          newRoster.push({
+              num: document.getElementById(`roster-num-${i}`).value,
+              name: document.getElementById(`roster-name-${i}`).value,
+              H: parseInt(document.getElementById(`roster-h-${i}`).value) || 0,
+              AB: parseInt(document.getElementById(`roster-ab-${i}`).value) || 0
+          });
+      }
+      set(ref(db, `${basePath}/rosters/${currentEditingTeam}`), newRoster).then(() => closeModal('roster-modal'));
+  };
+
+  window.openPitcherModal = (team) => {
+      currentEditingTeam = team;
+      const select = document.getElementById('pitcher-select');
+      select.innerHTML = '<option value="-1">-- 選擇投手 --</option>';
+      const roster = localState.rosters[team] || {};
+      const currentPIdx = localState.lineups[team]?.pitcherIndex || -1;
+      for (let idx = 0; idx < 25; idx++) {
+          const player = roster[idx];
+          if (player && (player.name || player.num)) {
+              const selected = currentPIdx == idx ? 'selected' : '';
+              select.innerHTML += `<option value="${idx}" ${selected}>${player.num} ${player.name}</option>`;
+          }
+      }
+      document.getElementById('pitcher-modal').style.display = 'flex';
+  };
+
+  window.savePitcher = () => {
+      if(!currentEditingTeam) return;
+      const pIdx = parseInt(document.getElementById('pitcher-select').value);
+      const team = currentEditingTeam;
+      const includeP = document.getElementById('dh-toggle').checked;
+
+      let updates = {};
+      updates[`${basePath}/lineups/${team}/pitcherIndex`] = pIdx;
+      updates[`${basePath}/pitchCount/${team}`] = 0;
+
+      if (includeP && pIdx !== -1) {
+          let batters = [];
+          for(let i=0; i<9; i++) batters.push(localState.lineups[team]?.batters?.[i] || {rosterIndex: -1, pos: ''});
+          let changed = false;
+
+          for(let i=0; i<9; i++) { if (batters[i].pos === 'P') { batters[i].rosterIndex = pIdx; changed = true; } }
+          if (!changed) {
+              for(let i=0; i<9; i++) { if (batters[i].rosterIndex == -1) { batters[i] = { rosterIndex: pIdx, pos: 'P' }; changed = true; break; } }
+          }
+          if (changed) updates[`${basePath}/lineups/${team}/batters`] = batters;
+      }
+
+      update(ref(db), updates).then(() => closeModal('pitcher-modal'));
+  };
+
+  let dragSrcEl = null;
+  function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', this.dataset.index); }
+  function handleDragOver(e) { if(e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.classList.add('drag-over'); return false; }
+  function handleDragLeave(e) { this.classList.remove('drag-over'); }
+  function handleDrop(e) {
+      if(e.stopPropagation) e.stopPropagation();
+      this.classList.remove('drag-over');
+      const team = this.dataset.team;
+      const srcIndex = parseInt(dragSrcEl.dataset.index);
+      const destIndex = parseInt(this.dataset.index);
+      
+      if (dragSrcEl !== this && dragSrcEl.dataset.team === team) {
+          let battersArray = [];
+          for(let i = 0; i < 9; i++) battersArray.push(localState.lineups[team]?.batters?.[i] || { rosterIndex: -1, pos: '' });
+          const [movedItem] = battersArray.splice(srcIndex, 1);
+          battersArray.splice(destIndex, 0, movedItem);
+          set(ref(db, `${basePath}/lineups/${team}/batters`), battersArray);
+      }
+      return false;
+  }
+
+  window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
+  window.updateLineupPlayer = (team, bIdx, rIdx) => {
+      let updates = { rosterIndex: parseInt(rIdx) };
+      if (parseInt(rIdx) !== -1 && parseInt(rIdx) === localState.lineups[team]?.pitcherIndex) updates.pos = 'P';
+      update(ref(db, `${basePath}/lineups/${team}/batters/${bIdx}`), updates);
+  };
+  window.updateLineupPos = (team, bIdx, pos) => update(ref(db, `${basePath}/lineups/${team}/batters/${bIdx}`), { pos: pos });
+
+  window.updateTitle = () => update(ref(db, basePath), { title: document.getElementById('title-input').value });
+  window.updateScore = async (team, v) => { const s = await get(child(dbRef, `${basePath}/teams/${team}/score`)); update(ref(db, `${basePath}/teams/${team}`), { score: Math.max(0, (s.exists()?s.val():0)+v) }); };
+  window.updateTeam = (team) => update(ref(db, `${basePath}/teams/${team}`), { name: document.getElementById(`${team}-name`).value });
+  window.stepInning = async (d) => {
+      const i = await get(child(dbRef, `${basePath}/gameInfo/inning`)); const t = await get(child(dbRef, `${basePath}/gameInfo/isTop`));
+      let inng = i.exists()?i.val():1, isT = t.exists()?t.val():true;
+      if(d==='next'){ if(isT) isT=false; else{ isT=true; inng++; } } else if(d==='prev'){ if(!isT) isT=true; else if(inng>1){ isT=false; inng--; } }
+      update(ref(db, `${basePath}/gameInfo`), { inning: inng, isTop: isT });
+  };
+  
+  window.updateCount = async (type, v) => {
+      const s = await get(child(dbRef, `${basePath}/count/${type}`)); 
+      let n = (s.exists() ? s.val() : 0) + v;
+      if(type==='balls' && n>3) n=0; 
+      if((type==='strikes' || type==='outs') && n>2) n=0;
+      
+      let updates = {};
+      updates[`${basePath}/count/${type}`] = n;
+      if (v > 0) {
+          const pitchingTeam = localState.isTop ? 'home' : 'away'; 
+          const pcSnap = await get(child(dbRef, `${basePath}/pitchCount/${pitchingTeam}`));
+          updates[`${basePath}/pitchCount/${pitchingTeam}`] = (pcSnap.exists() ? pcSnap.val() : 0) + 1;
+      }
+      update(ref(db), updates);
+  };
+  
+  window.resetCount = () => update(ref(db, `${basePath}/count`), { balls: 0, strikes: 0 });
+  window.toggleBase = async (base) => { const s = await get(child(dbRef, `${basePath}/bases/${base}`)); update(ref(db, `${basePath}/bases`), { [base]: !(s.exists()?s.val():false) }); };
+  window.updateSpeed = () => { const s = document.getElementById('speedInput').value; if(s) update(ref(db, `${basePath}/radar`), { speed: s }); };
+  // ===== 刪除功能 =====
+window.deleteTeam = async (teamId, teamName) => {
+    if (!confirm(`確定要刪除隊伍「${teamName}」嗎？`)) return;
+    await set(ref(db, `library_teams/${teamId}`), null);
+};
+
+window.deleteGame = async (gameId) => {
+    if (!confirm(`確定刪除此賽事？`)) return;
+    await set(ref(db, `games/${gameId}`), null);
+};
+
+// ===== URL 快速複製 =====
+function getBaseUrl(gameId) {
+    return `${location.origin}/overlay.html?gameId=${gameId}`;
+}
+
+window.copySpeedUrl = (gameId) => {
+    const url = getBaseUrl(gameId);
+    navigator.clipboard.writeText(url);
+    alert("已複製 Speed URL");
+};
+
+window.copyOnlySpeedUrl = (gameId) => {
+    const url = `${location.origin}/speed.html?gameId=${gameId}`;
+    navigator.clipboard.writeText(url);
+    alert("已複製 Only Speed URL");
+};
+</script>
 </body>
 </html>
