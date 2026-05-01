@@ -15,7 +15,7 @@
         }
         
         /* 容器 */
-        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; }
+        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; display: none;} /* 新增 display: none 等待登入 */
 
         .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
         
@@ -73,9 +73,33 @@
         .player-stats { font-size: 26px; font-weight: 900; color: #d35400; font-family: Arial, sans-serif; }
         
         .bat-icon { width: 36px; height: 36px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+        
+        /* 登入介面樣式 */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(16, 20, 81, 0.95); z-index: 10000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
+        }
+        .login-box {
+            background: white; padding: 30px; border-radius: 10px; color: black; width: 300px; text-align: center;
+        }
+        .login-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 10px; background: #101451; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
+
 <body>
+
+<!-- 登入層 -->
+<div id="login-overlay">
+    <div class="login-box">
+        <h2 style="margin-top:0">Overlay 系統登入</h2>
+        <input type="email" id="login-email" placeholder="Email">
+        <input type="password" id="login-pw" placeholder="Password">
+        <button id="login-btn">確認登入</button>
+        <p id="login-msg" style="color:red; font-size:12px; margin-top:10px;"></p>
+    </div>
+</div>
 
 <div id="scale-wrapper">
     <div class="scoreboard">
@@ -135,126 +159,159 @@
     </div>
 </div>
 
+<!-- 移除多餘的隱藏 div 以免干擾 DOM -->
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // TODO: 貼上您的 Firebase Config
-  const firebaseConfig = {
-  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
-  authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
-  databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "baseball-scoreboard-294d8",
-  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
-  messagingSenderId: "179359096477",
-  appId: "1:179359096477:web:8188f897371651442e7e74"
-  };
+// 修改匯入邏輯以支援 auth 與 auth 狀態監聽
+import { db, auth } from "./firebase.js";
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  let currentShowingSpeed = ""; 
+// ===== 登入邏輯 =====
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const e = document.getElementById('login-email').value;
+    const p = document.getElementById('login-pw').value;
+    const msg = document.getElementById('login-msg');
+    try {
+        await signInWithEmailAndPassword(auth, e, p);
+    } catch(err) { msg.innerText = "驗證失敗：" + err.message; }
+});
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get('gameId');
-  const basePath = gameId ? `games/${gameId}` : 'scoreboard';
+// ===== 監聽登入狀態 =====
+onAuthStateChanged(auth, (user) => {
+    if(user) {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('scale-wrapper').style.display = 'block';
+        startFirebaseSync();
+    } else {
+        document.getElementById('login-overlay').style.display = 'flex';
+        document.getElementById('scale-wrapper').style.display = 'none';
+    }
+});
 
-  onValue(ref(db, basePath), (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
+// ===== Firebase 讀取邏輯 =====
+function startFirebaseSync() {
+    const gameId = new URLSearchParams(location.search).get("gameId");
 
-      // 自動接收控制台送出的主題風格，並套用到最外層 Body
-      const currentTheme = data.theme || 'modern';
-      document.body.className = `theme-${currentTheme}`;
+    if (!gameId) {
+        document.getElementById("game-title").innerText = "❌ 缺少 gameId";
+        return;
+    }
 
-      if (data.title !== undefined) document.getElementById('game-title').innerText = data.title;
-      if (data.teams) {
-          document.getElementById('away-name').innerText = data.teams.away.name || '客隊';
-          document.getElementById('away-score').innerText = data.teams.away.score || '0';
-          document.getElementById('home-name').innerText = data.teams.home.name || '主隊';
-          document.getElementById('home-score').innerText = data.teams.home.score || '0';
-      }
+    const basePath = `games/${gameId}`;
+    console.log("✅ overlay gameId:", gameId);
 
-      let isTopGlobal = true;
-      if (data.gameInfo) {
-          isTopGlobal = data.gameInfo.isTop;
-          document.getElementById('inning-num').innerText = data.gameInfo.inning || '1';
-          document.getElementById('inning-half').innerText = isTopGlobal ? '▲' : '▼';
-      }
+    // ===== 監聽 =====
+    onValue(ref(db, basePath), (snap) => {
 
-      if (data.bases) {
-          document.getElementById('base-1').className = `base-diamond ${data.bases.first ? 'active' : ''}`;
-          document.getElementById('base-2').className = `base-diamond ${data.bases.second ? 'active' : ''}`;
-          document.getElementById('base-3').className = `base-diamond ${data.bases.third ? 'active' : ''}`;
-      }
+        const data = snap.val();
+        if (!data) return;
 
-      if (data.count) {
-          for(let i=1; i<=3; i++) document.getElementById(`b${i}`).className = `dot ${data.count.balls >= i ? 'b-active' : ''}`;
-          for(let i=1; i<=2; i++) document.getElementById(`s${i}`).className = `dot ${data.count.strikes >= i ? 's-active' : ''}`;
-          for(let i=1; i<=2; i++) document.getElementById(`o${i}`).className = `dot ${data.count.outs >= i ? 'o-active' : ''}`;
-      }
+        document.getElementById('game-title').innerText = data.title || '';
 
-      const pitchingTeam = isTopGlobal ? 'home' : 'away'; 
-      let pName = "--";
-      if (data.lineups && data.rosters) {
-          const pIdx = data.lineups[pitchingTeam]?.pitcherIndex;
-          if (pIdx !== undefined && pIdx !== -1) pName = data.rosters[pitchingTeam]?.[pIdx]?.name || "(未命名)";
-      }
-      document.getElementById('overlay-pitcher-name').innerText = pName;
-      if (data.pitchCount) document.getElementById('overlay-pitch-count').innerText = data.pitchCount[pitchingTeam] || 0;
+        document.getElementById('away-name').innerText = data.teams?.away?.name || '客隊';
+        document.getElementById('away-score').innerText = data.teams?.away?.score || 0;
+        document.getElementById('home-name').innerText = data.teams?.home?.name || '主隊';
+        document.getElementById('home-score').innerText = data.teams?.home?.score || 0;
 
-      const offset = data.radarOffset ? parseInt(data.radarOffset) : 0;
-      if (data.radar && data.radar.speed && data.radar.speed !== "") {
-          if (data.radar.speed !== currentShowingSpeed) {
-              currentShowingSpeed = data.radar.speed;
-              let rawSpeed = parseInt(data.radar.speed);
-              let finalSpeedText = data.radar.speed; 
-              if (!isNaN(rawSpeed)) finalSpeedText = (rawSpeed + offset).toString();
-              
-              document.getElementById('radar-speed').innerText = finalSpeedText;
-              document.getElementById('radar-container').style.display = 'flex'; 
-              
-              if(window.speedTimeout) clearTimeout(window.speedTimeout);
-              window.speedTimeout = setTimeout(() => {
-                  currentShowingSpeed = ""; 
-                  update(ref(db, `${basePath}/radar`), { speed: "" });
-              }, 3000);
-          }
-      } else {
-          currentShowingSpeed = "";
-          document.getElementById('radar-container').style.display = 'none'; 
-      }
+        const isTop = data.gameInfo?.isTop ?? true;
+        document.getElementById('inning-num').innerText = data.gameInfo?.inning || 1;
+        document.getElementById('inning-half').innerText = isTop ? '▲' : '▼';
 
-      if (data.currentBatter && data.currentBatter.team && data.currentBatter.rosterIndex !== -1) {
-          const cb = data.currentBatter;
-          const player = data.rosters?.[cb.team]?.[cb.rosterIndex];
-          if (player) {
-              document.getElementById('player-container').style.display = 'flex';
-              document.getElementById('player-number').innerText = player.num || '';
-              document.getElementById('player-name').innerText = player.name || '';
-              document.getElementById('player-stats').innerText = `${player.H || 0} / ${player.AB || 0}`;
-          } else { document.getElementById('player-container').style.display = 'none'; }
-      } else { document.getElementById('player-container').style.display = 'none'; }
-  });
+        document.getElementById('base-1').classList.toggle("active", data.bases?.first);
+        document.getElementById('base-2').classList.toggle("active", data.bases?.second);
+        document.getElementById('base-3').classList.toggle("active", data.bases?.third);
 
-  // 超清向量縮放邏輯
-  function applyScale() {
-      const wrapper = document.getElementById('scale-wrapper');
-      const board = document.querySelector('.scoreboard');
-      
-      const paddingOffset = 40; 
-      const targetW = 460 + paddingOffset;
-      const targetH = (board.offsetHeight || 300) + paddingOffset; 
-      
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
-      
-      const scale = Math.min(winW / targetW, winH / targetH);
-      wrapper.style.transform = 'none';
-      wrapper.style.zoom = scale;
-  }
-  
-  window.addEventListener('resize', applyScale);
-  setInterval(applyScale, 500);
+        for(let i=1;i<=3;i++){
+            document.getElementById(`b${i}`).className =
+                `dot ${data.count?.balls >= i ? 'b-active' : ''}`;
+        }
+        for(let i=1;i<=2;i++){
+            document.getElementById(`s${i}`).className =
+                `dot ${data.count?.strikes >= i ? 's-active' : ''}`;
+        }
+        for(let i=1;i<=2;i++){
+            document.getElementById(`o${i}`).className =
+                `dot ${data.count?.outs >= i ? 'o-active' : ''}`;
+        }
+        
+        // 投手用球數與姓名
+        const pitchingTeam = isTop ? 'home' : 'away';
+        const pc = data.pitchCount?.[pitchingTeam] || 0;
+        document.getElementById('overlay-pitch-count').innerText = pc;
+        
+        const pIdx = data.lineups?.[pitchingTeam]?.pitcherIndex;
+        if(pIdx !== undefined && pIdx !== -1 && data.rosters?.[pitchingTeam]?.[pIdx]) {
+            document.getElementById('overlay-pitcher-name').innerText = data.rosters[pitchingTeam][pIdx].name || '--';
+        } else {
+            document.getElementById('overlay-pitcher-name').innerText = '--';
+        }
+
+        // 打者資訊
+        const cb = data.currentBatter;
+        const playerContainer = document.getElementById('player-container');
+        if(cb && cb.rosterIndex !== -1 && data.rosters?.[cb.team]?.[cb.rosterIndex]) {
+            const player = data.rosters[cb.team][cb.rosterIndex];
+            playerContainer.style.display = 'flex';
+            document.getElementById('player-number').innerText = player.num || '00';
+            document.getElementById('player-name').innerText = player.name || '--';
+            document.getElementById('player-stats').innerText = `${player.H || 0} / ${player.AB || 0}`;
+        } else {
+            playerContainer.style.display = 'none';
+        }
+        // ===================================
+        // 新增：球速 (Radar) 顯示與自動消失邏輯
+        // ===================================
+        const radarContainer = document.getElementById('radar-container');
+        const radarSpeedEl = document.getElementById('radar-speed');
+        
+        if (data.radar && data.radar.speed && data.radar.speed > 0) {
+            radarSpeedEl.innerText = data.radar.speed;
+            radarContainer.style.display = 'flex'; // 顯示球速
+            
+            // 如果之前已經有計時器在跑，先把它清除掉，避免連續輸入時提早消失
+            if (window.radarTimeout) {
+                clearTimeout(window.radarTimeout);
+            }
+            
+            // 設定 6000 毫秒 (6秒) 後自動隱藏
+            window.radarTimeout = setTimeout(() => {
+                radarContainer.style.display = 'none';
+                
+                // 【重要功能】：自動把 Firebase 中的球速歸零
+                // 這樣即使投手連續兩球投出相同的球速 (例如 150 -> 150)，
+                // 系統也能感知到數值變化而重新觸發顯示動畫。
+                update(ref(db, basePath + '/radar'), { speed: 0 });
+                
+            }, 6000);
+            
+        } else {
+            radarContainer.style.display = 'none'; // 如果發送 0，立即隱藏
+        }
+        // ===================================
+    });
+}
+
+// ===== 縮放（安全版）=====
+function applyScale() {
+    const wrapper = document.getElementById('scale-wrapper');
+    const board = document.querySelector('.scoreboard');
+
+    if (!wrapper || !board) return;
+
+    const scale = Math.min(
+        window.innerWidth / 500,
+        window.innerHeight / (board.offsetHeight + 40)
+    );
+
+    wrapper.style.zoom = scale;
+}
+
+window.addEventListener('resize', applyScale);
+setInterval(applyScale, 500);
+
 </script>
+
 </body>
 </html>
