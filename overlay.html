@@ -15,7 +15,7 @@
         }
         
         /* 容器 */
-        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: top left; padding: 20px; display: none;} /* 新增 display: none 等待登入 */
+        #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: bottom right; padding: 20px; display: block;} /* 新增 display: none 等待登入 */
 
         .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
         
@@ -91,15 +91,7 @@
 <body>
 
 <!-- 登入層 -->
-<div id="login-overlay">
-    <div class="login-box">
-        <h2 style="margin-top:0">Overlay 系統登入</h2>
-        <input type="email" id="login-email" placeholder="Email">
-        <input type="password" id="login-pw" placeholder="Password">
-        <button id="login-btn">確認登入</button>
-        <p id="login-msg" style="color:red; font-size:12px; margin-top:10px;"></p>
-    </div>
-</div>
+
 
 <div id="scale-wrapper">
     <div class="scoreboard">
@@ -165,30 +157,12 @@
 
 // 修改匯入邏輯以支援 auth 與 auth 狀態監聽
 import { db, auth } from "./firebase.js";
-import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { onValue, update, ref } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // ===== 登入邏輯 =====
-document.getElementById('login-btn').addEventListener('click', async () => {
-    const e = document.getElementById('login-email').value;
-    const p = document.getElementById('login-pw').value;
-    const msg = document.getElementById('login-msg');
-    try {
-        await signInWithEmailAndPassword(auth, e, p);
-    } catch(err) { msg.innerText = "驗證失敗：" + err.message; }
-});
 
 // ===== 監聽登入狀態 =====
-onAuthStateChanged(auth, (user) => {
-    if(user) {
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('scale-wrapper').style.display = 'block';
-        startFirebaseSync();
-    } else {
-        document.getElementById('login-overlay').style.display = 'flex';
-        document.getElementById('scale-wrapper').style.display = 'none';
-    }
-});
 
 // ===== Firebase 讀取邏輯 =====
 function startFirebaseSync() {
@@ -309,7 +283,7 @@ function applyScale() {
 }
 
 window.addEventListener('resize', applyScale);
-setInterval(applyScale, 500);
+applyScale();
 
 </script>
 
