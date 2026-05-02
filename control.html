@@ -36,6 +36,36 @@
         /* ================= 2. 轉播控制台視圖樣式 (CameraFi Studio 風格) ================= */
         #controller-view { padding: 20px; display: none; max-width: 1200px; margin: 0 auto; }
         
+        
+        /* ===== URL 按鈕區 ===== */
+        .overlay-url-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* ⭐ 只影響 Batter URL 與登出之間 */
+        .url-btn-last {
+            margin-right: 70px;   /* 👉 可調：20~40px */
+        }
+        /* 按鈕樣式 */
+        .url-btn {
+            background: transparent;
+            color: #fff;
+
+            border: 1px solid #fff;   /* ⭐ 白框 */
+            padding: 6px 12px;
+
+            font-size: 12px;
+            border-radius: 4px;
+
+            cursor: pointer;
+        }
+
+        /* hover */
+        .url-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
         /* 控制台主卡片 */
         .camerafi-control-bar { 
             display: flex; 
@@ -269,13 +299,22 @@
         }
 
         .tab-btn {
-            padding: 6px 12px;
+            padding: 10px 18px;   /* ⭐ 放大 */
+            font-size: 14px;      /* ⭐ 字體變大 */
+            font-weight: bold;
+
+            border-radius: 6px;
+            cursor: pointer;
+
             background: #ddd;
             border: none;
-            cursor: pointer;
-            border-radius: 4px;
+        }
+        /* hover */
+        .tab-btn:hover {
+            background: #bbb;
         }
 
+        /* ⭐ active（目前選中） */
         .tab-btn.active {
             background: #3498db;
             color: white;
@@ -400,6 +439,133 @@
     cursor: ew-resize;
 }
 
+/* ===== Pitch Header ===== */
+.pitch-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.pitch-header-bar h3 {
+    margin: 0;
+}
+
+.pitch-count-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #e74c3c;
+}
+
+/* 按鈕 */
+.pitch-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* -1 */
+.pitch-btn.minus {
+    background: #7f8c8d;
+    color: white;
+}
+
+/* +1 */
+.pitch-btn.plus {
+    background: #2c3e50;
+    color: white;
+    transform: scale(1.1);   /* ⭐ 稍微放大 */
+}
+
+/* reset */
+.pitch-btn.reset {
+    background: #e74c3c;
+    color: white;
+}
+.pitch-btn:active {
+    transform: scale(0.95);
+}
+/* ===== 一行 Pitch UI ===== */
+.pitch-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 6px 0;
+}
+
+/* 左邊標題 */
+.pitch-title {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+}
+
+/* 數字 */
+.pitch-count-number {
+    font-size: 18px;
+    color: #e74c3c;
+}
+
+/* 按鈕區 */
+.pitch-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* 按鈕縮一點（因為同一行） */
+.pitch-btn {
+    padding: 12px 20px;   /* ⭐ 放大 */
+    font-size: 16px;      /* ⭐ 字體變大 */
+    border-radius: 8px;   /* ⭐ 更像轉播 UI */
+    font-weight: bold;
+    min-width: 60px;      /* ⭐ 按鈕寬度統一 */
+}
+/* ===== Pitch 控制區容器 ===== */
+.pitch-control-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+/* 分隔線 */
+.pitch-divider {
+    width: 2px;
+    height: 40px;
+    background: #ccc;
+}
+
+/* 每一行 */
+.pitch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+}
+
+/* 左標題 */
+.pitch-title {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* 數字 */
+.pitch-count-number {
+    font-size: 20px;
+    font-weight: bold;
+    color: #e74c3c;
+    margin-left: 4px;
+}
+
+/* 按鈕區 */
+.pitch-actions {
+    display: flex;
+    gap: 10px;   /* ⭐ 按鈕間距放大 */
+}
     </style>
 </head>
 <body>
@@ -440,9 +606,11 @@
 
 <div class="header-top-bar" id="top-nav" style="display: none;">
     <div style="font-size: 18px; font-weight: bold;" id="nav-game-title">賽事控制台</div>
-    <div>
-        <a href="control.html" style="color: white; text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 14px;">回首頁大廳</a>
-        <a id="nav-overlay-link" href="#" target="_blank" style="color: #FFFF00; text-decoration: none; margin-left: 15px; margin-right: 15px; font-size: 14px;">開啟疊加網頁 ↗</a>
+    <div class="overlay-url-group">
+        <a href="control.html" style="color: rgb(33, 218, 73); text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 16px;">回首頁大廳</a>
+        <button class="url-btn" onclick="copyOverlayUrl()">Overlay URL</button>
+        <button class="url-btn" onclick="copyLineupUrl()">Lineup URL</button>
+        <button class="url-btn url-btn-last" onclick="copyBatterUrl()">Batter URL</button>
         <button onclick="handleLogout()" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 14px; cursor: pointer;">登出</button>
     </div>
 </div>
@@ -552,48 +720,52 @@
     </div>
 
     <div class="panel">
+    <div class="pitch-header-bar">
     <h3>Pitch Count (投手用球數手動微調)</h3>
 
-    <!-- Tabs -->
     <div class="tab-header">
         <button class="tab-btn active" onclick="switchTab('pitching', this)">Pitching</button>
         <button class="tab-btn" onclick="switchTab('pitchingRecord', this)">Pitching Record</button>
+    </div>
     </div>
 
     <!-- ✅ Pitching（球數控制） -->
     <div id="tab-pitching" class="tab-content active">
 
-        <div style="display: flex; justify-content: space-around; align-items: center;">
-            
-            <!-- 客隊 -->
-            <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 8px;">
-                    客隊投手 (<span id="ctrl-away-pc" style="color:#e74c3c; font-size:20px;">0</span>)
-                </div>
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button onclick="updatePitchCount('away', -1)">-1</button>
-                    <button onclick="updatePitchCount('away', 1)">+1</button>
-                    <button onclick="resetPitchCount('away')">歸零</button>
-                </div>
+    <div class="pitch-control-container">
+
+        <!-- 客隊 -->
+        <div class="pitch-row">
+            <div class="pitch-title">
+                客隊投手 (<span id="ctrl-away-pc" class="pitch-count-number">0</span>)
             </div>
 
-            <div style="width:2px; height:50px; background:#ccc;"></div>
+            <div class="pitch-actions">
+                <button class="pitch-btn minus" onclick="updatePitchCount('away', -1)">-1</button>
+                <button class="pitch-btn plus" onclick="updatePitchCount('away', 1)">+1</button>
+                <button class="pitch-btn reset" onclick="resetPitchCount('away')">歸零</button>
+            </div>
+        </div>
 
-            <!-- 主隊 -->
-            <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 8px;">
-                    主隊投手 (<span id="ctrl-home-pc" style="color:#e74c3c; font-size:20px;">0</span>)
-                </div>
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button onclick="updatePitchCount('home', -1)">-1</button>
-                    <button onclick="updatePitchCount('home', 1)">+1</button>
-                    <button onclick="resetPitchCount('home')">歸零</button>
-                </div>
+        <!-- 分隔線 -->
+        <div class="pitch-divider"></div>
+
+        <!-- 主隊 -->
+        <div class="pitch-row">
+            <div class="pitch-title">
+                主隊投手 (<span id="ctrl-home-pc" class="pitch-count-number">0</span>)
             </div>
 
+            <div class="pitch-actions">
+                <button class="pitch-btn minus" onclick="updatePitchCount('home', -1)">-1</button>
+                <button class="pitch-btn plus" onclick="updatePitchCount('home', 1)">+1</button>
+                <button class="pitch-btn reset" onclick="resetPitchCount('home')">歸零</button>
+            </div>
         </div>
 
     </div>
+
+</div>
 
     <!-- ✅ Pitching Record -->
     <div id="tab-pitchingRecord" class="tab-content">
@@ -1697,6 +1869,38 @@ window.switchTab = function(tabName, el) {
     // 記錄
     localStorage.setItem('activeTab', tabName);
 };
+
+/* ===== Header URL 按鈕 ===== */
+function getGameId() {
+    return new URLSearchParams(window.location.search).get('gameId');
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    alert("已複製 URL");
+}
+
+// ⭐ Overlay
+function copyOverlayUrl() {
+    const gameId = getGameId();
+    const url = `${location.origin}/overlay.html?gameId=${gameId}`;
+    copyToClipboard(url);
+}
+
+// ⭐ Lineup
+function copyLineupUrl() {
+    const gameId = getGameId();
+    const url = `${location.origin}/lineup.html?gameId=${gameId}`;
+    copyToClipboard(url);
+}
+
+// ⭐ Batter
+function copyBatterUrl() {
+    const gameId = getGameId();
+    const url = `${location.origin}/batting_order.html?gameId=${gameId}`;
+    copyToClipboard(url);
+}
+
 
 /* ===== 滾動縮放（新增這段）===== */
 
