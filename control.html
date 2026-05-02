@@ -387,6 +387,10 @@
 
     <div class="panel">
         <h3>Pitch Count (投手用球數手動微調)</h3>
+        <div class="panel">
+            <h3>Pitching record</h3>
+            <div id="pitcher-record-list"></div>
+        </div>
         <div style="display: flex; justify-content: space-around; align-items: center;">
             <div style="text-align: center;">
                 <div style="font-weight: bold; margin-bottom: 8px; color: #333;">客隊投手 (<span id="ctrl-away-pc" style="color: #e74c3c; font-size: 20px;">0</span>)</div>
@@ -585,6 +589,11 @@
 
     return date.toLocaleString("zh-TW");
     }
+    function convertOutsToIP(outs) {
+    const inning = Math.floor(outs / 3);
+    const remain = outs % 3;
+    return `${inning}.${remain}`;
+    }
     // ===== 排序控制 =====
 let teamSortDesc = true;
 let gameSortDesc = true;
@@ -700,7 +709,7 @@ window.toggleGameSort = () => {
                     <div>
                         <strong>${team.name}</strong>
                         <div style="font-size:13px; color:#666; margin-top:6px;">
-                            建立日期：${formatTimestamp(team.createdAt)}
+                            ${formatTimestamp(team.createdAt)}
                         </div>
                     </div>
                     <div style="display:flex; gap:6px;">
@@ -916,6 +925,9 @@ window.toggleGameSort = () => {
               document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0;
               document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0;
           }
+          if (data.pitchers) {
+                renderPitcherRecords(data.pitchers);
+        }
 
           localState.rosters = data.rosters || {};
           localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} };
@@ -927,6 +939,25 @@ window.toggleGameSort = () => {
       });
   }
 
+  function renderPitcherRecords(pitchers) {
+    const container = document.getElementById("pitcher-record-list");
+    container.innerHTML = "";
+
+    const list = Object.entries(pitchers);
+
+    list.forEach(([id, p], index) => {
+        container.innerHTML += `
+            <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                <div style="width:30px;">${index + 1}</div>
+                <div style="width:100px;">${p.name}</div>
+                <div>IP: ${convertOutsToIP(p.stats?.outs || 0)}</div>
+                <div>H: ${p.stats?.H || 0}</div>
+                <div>BB: ${p.stats?.BB || 0}</div>
+                <div>SO: ${p.stats?.SO || 0}</div>
+            </div>
+        `;
+    });
+    }
   function updateBatterPanelDisplay() {
       const cb = localState.currentBatter;
       const displayEl = document.getElementById('result-batter-name');
@@ -980,6 +1011,31 @@ window.toggleGameSort = () => {
       if (isOut || isError) { ab++; }
       
       await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
+          // ===== 投手統計同步 =====
+        const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
+        const pitcherId = pitcherIdSnap.val();
+
+        if (pitcherId) {
+        const statsRef = `${basePath}/pitchers/${pitcherId}/stats`;
+        const snap = await get(child(dbRef, statsRef));
+        const pStats = snap.exists() ? snap.val() : {};
+
+        let updates = {};
+
+        if (['1B','2B','3B','HR'].includes(type)) {
+            updates.H = (pStats.H || 0) + 1;
+        }
+
+        if (type === 'BB') {
+            updates.BB = (pStats.BB || 0) + 1;
+        }
+
+        if (type === 'SO') {
+            updates.SO = (pStats.SO || 0) + 1;
+        }
+
+        await update(ref(db, statsRef), updates);
+        }
       if (type !== 'SB') resetCount();
   };
 
@@ -1129,6 +1185,26 @@ window.toggleGameSort = () => {
 
       let updates = {};
       updates[`${basePath}/lineups/${team}/pitcherIndex`] = pIdx;
+      // ===== 新增投手紀錄 =====
+    const pitcher = localState.rosters[team][pIdx];
+
+    const newPitcherRef = push(ref(db, `${basePath}/pitchers`));
+
+        updates[`${basePath}/currentPitcherId`] = newPitcherRef.key;
+
+        updates[`${basePath}/pitchers/${newPitcherRef.key}`] = {
+        name: pitcher?.name || "未命名",
+        num: pitcher?.num || "",
+        startTime: Date.now(),
+        stats: {
+            outs: 0,   // 🔥 改用 outs
+            H: 0,
+            BB: 0,
+            SO: 0,
+            R: 0,
+            ER: 0
+            }
+        };
       updates[`${basePath}/pitchCount/${team}`] = 0;
 
       if (includeP && pIdx !== -1) {
@@ -1198,6 +1274,19 @@ window.toggleGameSort = () => {
           const pcSnap = await get(child(dbRef, `${basePath}/pitchCount/${pitchingTeam}`));
           updates[`${basePath}/pitchCount/${pitchingTeam}`] = (pcSnap.exists() ? pcSnap.val() : 0) + 1;
       }
+      if (type === 'outs' && v > 0) {
+        const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
+        const pitcherId = pitcherIdSnap.val();
+
+        if (pitcherId) {
+        const outsSnap = await get(child(dbRef, `${basePath}/pitchers/${pitcherId}/stats/outs`));
+        const currentOuts = outsSnap.exists() ? outsSnap.val() : 0;
+
+        await update(ref(db, `${basePath}/pitchers/${pitcherId}/stats`), {
+            outs: currentOuts + 1
+        });
+        }
+      }
       update(ref(db), updates);
   };
   
@@ -1221,13 +1310,13 @@ function getBaseUrl(gameId) {
 }
 
 window.copySpeedUrl = (gameId) => {
-    const url = getBaseUrl(gameId);
+    const url = `https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/${gameId}/radar.json`;
     navigator.clipboard.writeText(url);
     alert("已複製 Speed URL");
 };
 
 window.copyOnlySpeedUrl = (gameId) => {
-    const url = `${location.origin}/speed.html?gameId=${gameId}`;
+    const url = `https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/only_speed.json`;
     navigator.clipboard.writeText(url);
     alert("已複製 Only Speed URL");
 };
