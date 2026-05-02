@@ -1052,11 +1052,10 @@ window.toggleGameSort = () => {
           document.getElementById('home-view').style.display = 'none';
           document.getElementById('controller-view').style.display = 'block';
           document.getElementById('top-nav').style.display = 'flex';
-          
-          // 設定導覽列連結
-          document.getElementById('nav-overlay-link').href = `overlay.html?gameId=${gameId || 'scoreboard'}`;
-          
-          initController();
+                   
+          setTimeout(() => {
+            initController();
+            }, 0);
       } else {
           // 顯示首頁大廳
           document.getElementById('home-view').style.display = 'block';
@@ -1273,7 +1272,10 @@ window.toggleGameSort = () => {
 
           if(data.title !== undefined) {
               document.getElementById('title-input').value = data.title;
-              document.getElementById('nav-game-title').innerText = `控制台 - ${data.title}`;
+              const titleEl = document.getElementById('nav-game-title');
+            if (titleEl) {
+                titleEl.innerText = `控制台 - ${data.title}`;
+            }
           }
           if(data.teams) {
               localState.teamNames.away = data.teams.away.name || '客隊';
@@ -1443,7 +1445,110 @@ container.innerHTML = html;
 
         await update(ref(db, statsRef), updates);
         }
-      if (type !== 'SB') resetCount();
+        autoSwitchTab('pitchingRecord');
+        // ===== 🎯 打席結束智慧處理 =====
+
+const EVENT_RULES = {
+    // 出局
+    SO: { out: 1 },
+    'N.O': { out: 1 },
+    GO: { out: 1 },
+    FO: { out: 1 },
+    GDP: { out: 1 },
+    FC: { out: 1 },
+
+    // 上壘
+    BB: { out: 0 },
+    HBP: { out: 0 },
+    IBB: { out: 0 },
+
+    // 安打
+    '1B': { out: 0 },
+    '2B': { out: 0 },
+    '3B': { out: 0 },
+
+    // HR
+    HR: { out: 0 }
+};
+
+const rule = EVENT_RULES[type];
+
+// ===== 只處理「打席結束事件」=====
+if (rule) {
+
+    // ===== 1️⃣ 清空球數 =====
+    await update(ref(db, `${basePath}/count`), {
+        balls: 0,
+        strikes: 0
+    });
+
+    // ===== 2️⃣ 出局數 =====
+    if (rule.out > 0) {
+        const outSnap = await get(ref(db, `${basePath}/count/outs`));
+        const currentOuts = outSnap.val() || 0;
+
+        let newOuts = currentOuts + 1;
+
+        // ⭐ 三出局
+        if (newOuts >= 3) {
+            newOuts = 0;
+
+            // 👉 換局（可選）
+            const inningSnap = await get(child(dbRef, `${basePath}/gameInfo`));
+            const gameInfo = inningSnap.val();
+
+            if (gameInfo) {
+                let inning = gameInfo.inning || 1;
+                let isTop = gameInfo.isTop;
+
+                if (isTop) {
+                    isTop = false;
+                } else {
+                    isTop = true;
+                    inning++;
+                }
+
+                await update(ref(db, `${basePath}/gameInfo`), {
+                    inning,
+                    isTop
+                });
+            }
+        }
+
+        await update(ref(db, `${basePath}/count`), {
+            outs: newOuts
+        });
+    }
+
+    // ===== 3️⃣ 自動下一棒 =====
+    const current = localState.currentBatter;
+
+if (current) {
+
+    const lineup = Object.values(localState.lineups[current.team]?.batters || {});
+
+    if (lineup.length === 0) return;
+
+    const currentIndex = lineup.findIndex(b =>
+        b && b.rosterIndex == current.rosterIndex
+    );
+
+    if (currentIndex !== -1) {
+        const nextIndex = (currentIndex + 1) % lineup.length;
+
+        const nextBatter = lineup[nextIndex];
+
+        if (nextBatter && nextBatter.rosterIndex !== -1) {
+            await update(ref(db, basePath), {
+                currentBatter: {
+                    team: current.team,
+                    rosterIndex: nextBatter.rosterIndex
+                }
+            });
+        }
+    }
+}
+}
   };
 
   function renderAllLineups() {
@@ -1778,7 +1883,9 @@ window.copyOnlySpeedUrl = (gameId) => {
     navigator.clipboard.writeText(url);
 };
 
-const wrapper = document.getElementById("preview-wrapper");
+window.addEventListener('load', () => {
+    const wrapper = document.getElementById("preview-wrapper");
+});
 const handle = document.getElementById("resize-handle");
 
 let resizing = false;
@@ -1868,6 +1975,13 @@ window.switchTab = function(tabName, el) {
 
     // 記錄
     localStorage.setItem('activeTab', tabName);
+};
+// ⭐⭐⭐ 放這裡 ⭐⭐⭐
+window.autoSwitchTab = function(tabName) {
+    const btn = document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
+    if (btn) {
+        switchTab(tabName, btn);
+    }
 };
 
 /* ===== Header URL 按鈕 ===== */
