@@ -8,6 +8,10 @@
         /* 共用基礎樣式 */
         body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #ffffff; color: #000; margin: 0; user-select: none; }
         
+        #pitcher-record-list table tr:hover {
+            background: #f5f7fa;
+        }
+
         /* ================= 1. 首頁大廳視圖樣式 ================= */
         #home-view { padding: 30px; max-width: 1200px; margin: 0 auto; }
         .dashboard-header { text-align: center; color: #101451; border-bottom: 3px solid #101451; padding-bottom: 10px; margin-bottom: 30px; }
@@ -258,9 +262,171 @@
         .btn-action { background: #3498db; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         
         .header-top-bar { background: #101451; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .tab-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 6px 12px;
+            background: #ddd;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+/* header */
+
+/* ===== Preview Sticky（懸浮模式） ===== */
+.preview-sticky {
+    position: fixed;
+    top: 80px;   /* 距離上方 */
+    left: 20px;  /* 距離左側 */
+    z-index: 9999;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+}
+.preview-body {
+    width: 100%;
+    background: transparent;
+}
+
+.preview-controls button {
+    background: #555;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    margin-left: 4px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+/* hover */
+.preview-controls button:hover {
+    background: #777;
+}
+
+/* ⭐ 當前選中 */
+.preview-controls button.active {
+    background: #f1c40f;
+    color: #000;
+    font-weight: bold;
+}
+
+/* ===== Preview 主體（唯一尺寸來源） ===== */
+#preview-wrapper {
+    position: relative;   /* ⭐ 預設：跟頁面 */
+    width: 640px;
+    margin: 20px 0;
+
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.preview-sticky {
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    z-index: 9999;
+}
+
+    width: 640px;   /* ⭐ 初始尺寸 */
+
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+
+    z-index: 9999;
+    overflow: hidden;
+}
+
+/* header */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 6px 10px;
+    background: #333;
+    color: #fff;
+    font-size: 14px;
+}
+
+/* body */
+.preview-body {
+    width: 100%;
+}
+
+/* iframe */
+#preview-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    display: block;
+}
+
+/* ⭐ 右側 resize */
+#resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+
+    width: 8px;
+    height: 100%;
+
+    cursor: ew-resize;
+}
+
     </style>
 </head>
 <body>
+
+<!-- ===== 🎬 Preview 視窗 ===== -->
+<div id="preview-wrapper">
+
+    <div class="preview-header">
+        Preview
+        <div class="preview-controls">
+            <button class="preview-btn active" onclick="switchPreview('scoreboard', this)">Scoreboard</button>
+            <button class="preview-btn" onclick="switchPreview('lineup', this)">Lineup</button>
+            <button class="preview-btn" onclick="switchPreview('batting', this)">Batting</button>
+            <label>
+                Stick/懸浮 <input type="checkbox" id="preview-stick-toggle">
+            </label>
+        </div>
+    </div>
+
+    <div class="preview-body">
+        <iframe id="preview-frame"></iframe>
+    </div>
+
+    <!-- ⭐ 右側 resize 區 -->
+    <div id="resize-handle"></div>
+
+</div>
 
 <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #101451; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
     <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; color: #333; text-align: center;">
@@ -386,31 +552,71 @@
     </div>
 
     <div class="panel">
-        <h3>Pitch Count (投手用球數手動微調)</h3>
-        <div class="panel">
-            <h3>Pitching record</h3>
-            <div id="pitcher-record-list"></div>
-        </div>
+    <h3>Pitch Count (投手用球數手動微調)</h3>
+
+    <!-- Tabs -->
+    <div class="tab-header">
+        <button class="tab-btn active" onclick="switchTab('pitching', this)">Pitching</button>
+        <button class="tab-btn" onclick="switchTab('pitchingRecord', this)">Pitching Record</button>
+    </div>
+
+    <!-- ✅ Pitching（球數控制） -->
+    <div id="tab-pitching" class="tab-content active">
+
         <div style="display: flex; justify-content: space-around; align-items: center;">
+            
+            <!-- 客隊 -->
             <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 8px; color: #333;">客隊投手 (<span id="ctrl-away-pc" style="color: #e74c3c; font-size: 20px;">0</span>)</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="updatePitchCount('away', -1)" style="padding: 8px 15px; background: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer;">-1</button>
-                    <button onclick="updatePitchCount('away', 1)" style="padding: 8px 15px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer;">+1 (界外/敬遠)</button>
-                    <button onclick="resetPitchCount('away')" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">歸零</button>
+                <div style="font-weight: bold; margin-bottom: 8px;">
+                    客隊投手 (<span id="ctrl-away-pc" style="color:#e74c3c; font-size:20px;">0</span>)
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="updatePitchCount('away', -1)">-1</button>
+                    <button onclick="updatePitchCount('away', 1)">+1</button>
+                    <button onclick="resetPitchCount('away')">歸零</button>
                 </div>
             </div>
-            <div style="width: 2px; height: 50px; background: #ccc;"></div>
+
+            <div style="width:2px; height:50px; background:#ccc;"></div>
+
+            <!-- 主隊 -->
             <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 8px; color: #333;">主隊投手 (<span id="ctrl-home-pc" style="color: #e74c3c; font-size: 20px;">0</span>)</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="updatePitchCount('home', -1)" style="padding: 8px 15px; background: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer;">-1</button>
-                    <button onclick="updatePitchCount('home', 1)" style="padding: 8px 15px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer;">+1 (界外/敬遠)</button>
-                    <button onclick="resetPitchCount('home')" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">歸零</button>
+                <div style="font-weight: bold; margin-bottom: 8px;">
+                    主隊投手 (<span id="ctrl-home-pc" style="color:#e74c3c; font-size:20px;">0</span>)
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="updatePitchCount('home', -1)">-1</button>
+                    <button onclick="updatePitchCount('home', 1)">+1</button>
+                    <button onclick="resetPitchCount('home')">歸零</button>
                 </div>
             </div>
+
+        </div>
+
+    </div>
+
+    <!-- ✅ Pitching Record -->
+    <div id="tab-pitchingRecord" class="tab-content">
+        <div id="pitcher-record-list">
+    <table style="width:100%; border-collapse:collapse; text-align:center;">
+        <thead style="border-bottom:2px solid #333;">
+            <tr>
+                <th style="text-align:left; padding:6px;">投手</th>
+                <th>IP</th>
+                <th>H</th>
+                <th>BB</th>
+                <th>SO</th>
+                <th>投球數</th>
+                <th>MAX</th>
+            </tr>
+        </thead>
+        <tbody id="pitcher-record-body"></tbody>
+    </table>
+</div>
         </div>
     </div>
+
+</div>
 
     <div class="player-info-container">
         <div class="player-header-bar">
@@ -925,9 +1131,7 @@ window.toggleGameSort = () => {
               document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0;
               document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0;
           }
-          if (data.pitchers) {
-                renderPitcherRecords(data.pitchers);
-        }
+          renderPitcherRecords(data.pitchers || {}, data.currentPitcherId);
 
           localState.rosters = data.rosters || {};
           localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} };
@@ -936,27 +1140,57 @@ window.toggleGameSort = () => {
           
           renderAllLineups();
           updateBatterPanelDisplay();
+          if (!window._tabInitialized) {
+            const savedTab = localStorage.getItem('activeTab');
+            if (savedTab) {
+            const btn = document.querySelector(`.tab-btn[onclick*="${savedTab}"]`);
+            if (btn) btn.click();
+            }
+            else {
+            // ⭐ 預設
+            const btn = document.querySelector('.tab-btn');
+            if (btn) btn.click();
+            }
+            window._tabInitialized = true;
+            }   
       });
   }
 
-  function renderPitcherRecords(pitchers) {
-    const container = document.getElementById("pitcher-record-list");
+  function renderPitcherRecords(pitchers, currentPitcherId) {
+    const container = document.getElementById("pitcher-record-body");
     container.innerHTML = "";
 
-    const list = Object.entries(pitchers);
+    let html = "";
 
-    list.forEach(([id, p], index) => {
-        container.innerHTML += `
-            <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
-                <div style="width:30px;">${index + 1}</div>
-                <div style="width:100px;">${p.name}</div>
-                <div>IP: ${convertOutsToIP(p.stats?.outs || 0)}</div>
-                <div>H: ${p.stats?.H || 0}</div>
-                <div>BB: ${p.stats?.BB || 0}</div>
-                <div>SO: ${p.stats?.SO || 0}</div>
-            </div>
-        `;
-    });
+    // ⭐ 先排序（最新在上）
+        Object.entries(pitchers)
+        .sort((a, b) => {
+            return (b[1].startTime || 0) - (a[1].startTime || 0);
+        })
+        .forEach(([id, p]) => {
+
+            const stats = p.stats || {};
+            const isCurrent = id === currentPitcherId;
+
+    html += `
+        <tr style="
+            border-bottom:1px solid #eee;
+            ${isCurrent ? 'background:#ffe066; font-weight:bold;' : ''}
+        ">
+            <td style="text-align:left; padding:6px;">${isCurrent ? '👉 ' : ''}${p.name}</td>
+            <td>${convertOutsToIP(stats.outs || 0)}</td>
+            <td>${stats.H || 0}</td>
+            <td>${stats.BB || 0}</td>
+            <td>${stats.SO || 0}</td>
+            <td>${stats.pitchCount || 0}</td>
+            <td style="color:#e74c3c;">
+                ${stats.maxSpeed ?? '--'}
+            </td>
+        </tr>
+    `;
+});
+
+container.innerHTML = html;
     }
   function updateBatterPanelDisplay() {
       const cb = localState.currentBatter;
@@ -1011,7 +1245,8 @@ window.toggleGameSort = () => {
       if (isOut || isError) { ab++; }
       
       await update(ref(db, `${basePath}/rosters/${team}/${rosterIndex}`), { H: h, AB: ab });
-          // ===== 投手統計同步 =====
+      autoSwitchTab('pitchingRecord');
+      // ===== 投手統計同步 =====
         const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
         const pitcherId = pitcherIdSnap.val();
 
@@ -1093,9 +1328,12 @@ window.toggleGameSort = () => {
   window.updatePitchCount = async (team, value) => {
       const pcSnap = await get(child(dbRef, `${basePath}/pitchCount/${team}`));
       update(ref(db, `${basePath}/pitchCount`), { [team]: Math.max(0, (pcSnap.exists() ? pcSnap.val() : 0) + value) });
-  };
-  window.resetPitchCount = (team) => update(ref(db, `${basePath}/pitchCount`), { [team]: 0 });
-
+        autoSwitchTab('pitching');
+    };
+  window.resetPitchCount = (team) => {
+    update(ref(db, `${basePath}/pitchCount`), { [team]: 0 });
+    autoSwitchTab('pitching');
+    };
   window.updateGlobalDH = (isChecked) => {
       update(ref(db, `${basePath}/lineups`), { includePitcher: isChecked });
       ['away', 'home'].forEach(team => {
@@ -1219,7 +1457,12 @@ window.toggleGameSort = () => {
           if (changed) updates[`${basePath}/lineups/${team}/batters`] = batters;
       }
 
-      update(ref(db), updates).then(() => closeModal('pitcher-modal'));
+      update(ref(db), updates).then(() => {
+        closeModal('pitcher-modal');
+
+        // ⭐ 這行才是關鍵
+        autoSwitchTab('pitching', true);
+        });
   };
 
   let dragSrcEl = null;
@@ -1270,6 +1513,19 @@ window.toggleGameSort = () => {
       let updates = {};
       updates[`${basePath}/count/${type}`] = n;
       if (v > 0) {
+        // ===== 投球數同步到投手 =====
+        const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
+        const pitcherId = pitcherIdSnap.val();
+
+        if (pitcherId) {
+        const statsRef = `${basePath}/pitchers/${pitcherId}/stats`;
+        const snap = await get(child(dbRef, statsRef));
+        const stats = snap.exists() ? snap.val() : {};
+
+        await update(ref(db, statsRef), {
+        pitchCount: (stats.pitchCount || 0) + 1
+        });
+        }
           const pitchingTeam = localState.isTop ? 'home' : 'away'; 
           const pcSnap = await get(child(dbRef, `${basePath}/pitchCount/${pitchingTeam}`));
           updates[`${basePath}/pitchCount/${pitchingTeam}`] = (pcSnap.exists() ? pcSnap.val() : 0) + 1;
@@ -1285,6 +1541,7 @@ window.toggleGameSort = () => {
         await update(ref(db, `${basePath}/pitchers/${pitcherId}/stats`), {
             outs: currentOuts + 1
         });
+        autoSwitchTab('pitching');
         }
       }
       update(ref(db), updates);
@@ -1292,7 +1549,36 @@ window.toggleGameSort = () => {
   
   window.resetCount = () => update(ref(db, `${basePath}/count`), { balls: 0, strikes: 0 });
   window.toggleBase = async (base) => { const s = await get(child(dbRef, `${basePath}/bases/${base}`)); update(ref(db, `${basePath}/bases`), { [base]: !(s.exists()?s.val():false) }); };
-  window.updateSpeed = () => { const s = document.getElementById('speedInput').value; if(s) update(ref(db, `${basePath}/radar`), { speed: s }); };
+  window.updateSpeed = async () => {
+    const s = parseInt(document.getElementById('speedInput').value);
+    if (!s) return;
+
+    // 寫入即時速度
+    await update(ref(db, `${basePath}/radar`), { speed: s });
+
+    // ===== 寫入 log =====
+    const logRef = push(ref(db, `${basePath}/radar_log`));
+    await set(logRef, {
+        speed: s,
+        time: Date.now()
+    });
+
+    // ===== 更新投手 max speed =====
+    const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
+    const pitcherId = pitcherIdSnap.val();
+
+    if (pitcherId) {
+        const statsRef = `${basePath}/pitchers/${pitcherId}/stats`;
+        const snap = await get(child(dbRef, statsRef));
+        const stats = snap.exists() ? snap.val() : {};
+
+        if (!stats.maxSpeed || s > stats.maxSpeed) {
+            await update(ref(db, statsRef), {
+                maxSpeed: s
+            });
+        }
+    }
+    };
   // ===== 刪除功能 =====
 window.deleteTeam = async (teamId, teamName) => {
     if (!confirm(`確定要刪除隊伍「${teamName}」嗎？`)) return;
@@ -1316,10 +1602,153 @@ window.copySpeedUrl = (gameId) => {
 };
 
 window.copyOnlySpeedUrl = (gameId) => {
-    const url = `https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/only_speed.json`;
+    const url = `${location.origin}/only_speed.html?gameId=${gameId}`;
     navigator.clipboard.writeText(url);
-    alert("已複製 Only Speed URL");
 };
+
+const wrapper = document.getElementById("preview-wrapper");
+const handle = document.getElementById("resize-handle");
+
+let resizing = false;
+
+handle.addEventListener("mousedown", () => {
+    resizing = true;
+});
+
+document.addEventListener("mousemove", (e) => {
+    if (!resizing) return;
+
+    const rect = wrapper.getBoundingClientRect();
+
+    let newWidth = e.clientX - rect.left;
+
+    // ⭐ 最大不能超過 viewport
+    const maxWidth = window.innerWidth - rect.left - 20;
+
+    newWidth = Math.max(320, Math.min(maxWidth, newWidth));
+
+    wrapper.style.width = newWidth + "px";
+
+    localStorage.setItem("previewWidth", newWidth);
+});
+
+document.addEventListener("mouseup", () => {
+    resizing = false;
+});
+
 </script>
+
+<script>
+    /* ===== 懸浮控制 ===== */
+window.addEventListener('load', () => {
+
+    const wrapper = document.getElementById('preview-wrapper');
+    const toggle = document.getElementById('preview-stick-toggle');
+    
+    // ⭐ 加在這裡
+    toggle.checked = wrapper.classList.contains('preview-sticky');
+    // ===== Stick 控制 =====
+    toggle.addEventListener('change', () => {
+
+    if (toggle.checked) {
+        // ⭐ 懸浮（跟著視窗）
+        wrapper.style.position = 'fixed';
+        wrapper.style.top = '80px';
+        wrapper.style.left = '20px';
+        wrapper.style.zIndex = '9999';
+    } else {
+        // ⭐ 回到頁面
+        wrapper.style.position = 'relative';
+        wrapper.style.top = '0';
+        wrapper.style.left = '0';
+        wrapper.style.zIndex = '';
+    }
+
+});
+
+    // ===== 初始化 overlay 按鈕 =====
+    const firstBtn = document.querySelector('.preview-btn');
+    switchPreview('scoreboard', firstBtn);
+
+    // ===== 初始化尺寸 =====
+    const saved = localStorage.getItem("previewWidth");
+    if (saved) {
+        wrapper.style.width = saved + "px";
+    }
+
+});
+
+window.switchTab = function(tabName, el) {
+
+    // 切按鈕樣式
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (el) el.classList.add('active');
+
+    // 切內容
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    const target = document.getElementById('tab-' + tabName);
+    if (target) target.classList.add('active');
+
+    // 記錄
+    localStorage.setItem('activeTab', tabName);
+};
+
+/* ===== 滾動縮放（新增這段）===== */
+
+function switchPreview(type, el) {
+
+    // ⭐ 1. 清掉所有按鈕 active
+    document.querySelectorAll('.preview-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // ⭐ 2. 設定目前按鈕
+    if (el) el.classList.add('active');
+
+    // ⭐ 3. 原本邏輯（不要動）
+    const gameId = new URLSearchParams(window.location.search).get('gameId') || '';
+    const iframe = document.getElementById('preview-frame');
+
+    let url = '';
+
+    if (type === 'scoreboard') {
+        url = `overlay.html?gameId=${gameId}`;
+    }
+
+    if (type === 'lineup') {
+        url = `lineup.html?gameId=${gameId}&team=home`;
+    }
+
+    if (type === 'batting') {
+        url = `batting_order.html?gameId=${gameId}&team=home`;
+    }
+
+    iframe.src = url;
+    iframe.onload = () => {
+    try {
+        const body = iframe.contentWindow.document.body;
+
+        const w = body.scrollWidth;
+        const h = body.scrollHeight;
+
+        if (w && h) {
+            iframe.style.height = (iframe.offsetWidth * (h / w)) + "px";
+        }
+
+    } catch (e) {
+        console.warn("iframe resize fail");
+    }
+};
+
+
+    };
+
+</script>
+
 </body>
 </html>
