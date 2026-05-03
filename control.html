@@ -385,22 +385,7 @@
     border-radius: 6px;
     overflow: hidden;
 }
-.preview-sticky {
-    position: fixed;
-    top: 80px;
-    left: 20px;
-    z-index: 9999;
-}
 
-    width: 640px;   /* ⭐ 初始尺寸 */
-
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 6px;
-
-    z-index: 9999;
-    overflow: hidden;
-}
 
 /* header */
 .preview-header {
@@ -1144,7 +1129,7 @@ window.toggleGameSort = () => {
 
         <div style="display:flex; gap:6px;">
             <a href="control.html?gameId=${id}" class="btn-primary">進入控制台</a>
-            <a href="overlay.html?gameId=${id}" target="_blank" class="btn-outline">
+            <a href="${base}/overlay.html?gameId=${id}" target="_blank" class="btn-outline">
                 開啟疊加
             </a>
             <button class="btn-danger" onclick="deleteGame('${id}')">刪除</button>
@@ -1159,7 +1144,6 @@ window.toggleGameSort = () => {
                 Only Speed URL
             </button>
         </div>
-
     </div>
 </div>
               `;
@@ -1867,6 +1851,8 @@ window.deleteGame = async (gameId) => {
     await set(ref(db, `games/${gameId}`), null);
 };
 
+
+
 // ===== URL 快速複製 =====
 function getBaseUrl(gameId) {
     return `${location.origin}/overlay.html?gameId=${gameId}`;
@@ -1885,39 +1871,43 @@ window.copyOnlySpeedUrl = (gameId) => {
 
 window.addEventListener('load', () => {
     const wrapper = document.getElementById("preview-wrapper");
-});
-const handle = document.getElementById("resize-handle");
-
-let resizing = false;
-
-handle.addEventListener("mousedown", () => {
+    const handle = document.getElementById("resize-handle");
+    
+    let resizing = false;
+    handle.addEventListener("mousedown", () => {
     resizing = true;
-});
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (!resizing) return;
 
-document.addEventListener("mousemove", (e) => {
-    if (!resizing) return;
+        const rect = wrapper.getBoundingClientRect();
 
-    const rect = wrapper.getBoundingClientRect();
-
-    let newWidth = e.clientX - rect.left;
+        let newWidth = e.clientX - rect.left;
 
     // ⭐ 最大不能超過 viewport
-    const maxWidth = window.innerWidth - rect.left - 20;
+        const maxWidth = window.innerWidth - rect.left - 20;
 
-    newWidth = Math.max(320, Math.min(maxWidth, newWidth));
+        newWidth = Math.max(320, Math.min(maxWidth, newWidth));
 
-    wrapper.style.width = newWidth + "px";
+        wrapper.style.width = newWidth + "px";
 
-    localStorage.setItem("previewWidth", newWidth);
+        localStorage.setItem("previewWidth", newWidth);
+    });
+    document.addEventListener("mouseup", () => {
+        resizing = false;
+    });
 });
 
-document.addEventListener("mouseup", () => {
-    resizing = false;
-});
+
 
 </script>
 
 <script>
+    window.getBasePath = function() {
+    const path = location.pathname.split('/').filter(Boolean);
+    return path.length > 0 ? `/${path[0]}` : '';
+}
+
     /* ===== 懸浮控制 ===== */
 window.addEventListener('load', () => {
 
@@ -1997,21 +1987,24 @@ function copyToClipboard(text) {
 // ⭐ Overlay
 function copyOverlayUrl() {
     const gameId = getGameId();
-    const url = `${location.origin}/overlay.html?gameId=${gameId}`;
+    const base = location.origin + getBasePath();
+    const url = `${base}/overlay.html?gameId=${gameId}`;
     copyToClipboard(url);
 }
 
 // ⭐ Lineup
 function copyLineupUrl() {
     const gameId = getGameId();
-    const url = `${location.origin}/lineup.html?gameId=${gameId}`;
+    const base = location.origin + getBasePath();
+    const url = `${base}/lineup.html?gameId=${gameId}&team=home`;
     copyToClipboard(url);
 }
 
 // ⭐ Batter
 function copyBatterUrl() {
     const gameId = getGameId();
-    const url = `${location.origin}/batting_order.html?gameId=${gameId}`;
+    const base = location.origin + getBasePath();
+    const url = `${base}/batting_order.html?gameId=${gameId}&team=home`;
     copyToClipboard(url);
 }
 
@@ -2031,6 +2024,8 @@ function switchPreview(type, el) {
     // ⭐ 3. 原本邏輯（不要動）
     const gameId = new URLSearchParams(window.location.search).get('gameId') || '';
     const iframe = document.getElementById('preview-frame');
+    const base = location.origin + getBasePath();
+
 
     let url = '';
 
@@ -2065,8 +2060,12 @@ function switchPreview(type, el) {
 
 
     };
+// ⭐⭐⭐ 放在全域（不能放在 function 裡）
 
 </script>
+
+
+
 
 </body>
 </html>
