@@ -196,6 +196,15 @@
 </div>
 
 <script type="module">
+
+    function getTeamsByInning(gameInfo) {
+    const isTop = gameInfo?.isTop ?? true;
+
+    return {
+        batting: isTop ? 'away' : 'home',   // 打擊
+        fielding: isTop ? 'home' : 'away'   // 守備
+    };
+}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -216,9 +225,9 @@
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
-  const targetTeam = urlParams.get('team'); // 'away' 或 'home'
+  const urlTeam = urlParams.get('team'); // fallback 用
   
-  if (!gameId || !targetTeam) {
+  if (!gameId) {
       document.getElementById('team-title').innerText = "錯誤：參數遺失";
   } else {
       loadBattingOrder();
@@ -230,12 +239,21 @@
       
       if (!snapshot.exists()) return;
       const data = snapshot.val();
+
+	// 🟢 接收風格標籤，並套用到最外層 body
+      const currentTheme = data.theme || 'modern';
+      document.body.className = `theme-${currentTheme}`;
       
-      const teamName = data.teams?.[targetTeam]?.name || "未命名隊伍";
+      const teams = getTeamsByInning(data.gameInfo);
+
+        // ⭐ 打序一定用 batting
+        const team = teams.batting || urlTeam;
+
+        const teamName = data.teams?.[team]?.name || "未命名隊伍";
       document.getElementById('team-title').innerText = teamName;
 
-      const rosterData = data.rosters?.[targetTeam] || {};
-      const lineupData = data.lineups?.[targetTeam] || {};
+      const rosterData = data.rosters?.[team] || {};
+      const lineupData = data.lineups?.[team] || {};
       const batters = lineupData.batters || {};
 
       const listContainer = document.getElementById('lineup-list');
