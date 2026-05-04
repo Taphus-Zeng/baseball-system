@@ -234,7 +234,18 @@
         .panel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; background: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 8px; padding: 15px; }
         .panel h3 { margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
         .player-info-container { margin-bottom: 20px; }
-        .player-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .player-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+
+            position: relative;   /* ⭐ 防止跑位 */
+            z-index: 10;
+        }
         .dh-toggle-label { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; color: #555; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; } .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
@@ -777,14 +788,22 @@
 
     <div class="player-info-container">
         <div class="player-header-bar">
-            <h2 style="margin: 0; font-size: 22px;">Player Info</h2>
-            <label class="dh-toggle-label">
-                Include pitcher in the batter line
-                <label class="switch">
-                    <input type="checkbox" id="dh-toggle" onchange="updateGlobalDH(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </label>
+
+        <div style="display:flex; align-items:center; gap:15px;">
+        <h2 style="margin: 0;">Player Info</h2>
+
+        <button class="btn-danger" onclick="swapTeams()">
+            🔄 主客對調
+        </button>
+        </div>
+
+        <label class="dh-toggle-label">
+        Include pitcher in the batter line
+        <label class="switch">
+            <input type="checkbox" id="dh-toggle" onchange="updateGlobalDH(this.checked)">
+            <span class="slider"></span>
+        </label>
+        </label>
         </div>
 
         <div class="teams-lineup-grid">
@@ -918,6 +937,8 @@
 </div>
 
 <script type="module">
+  
+  
   // 修改：加入 firebase-auth.js 的 import
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, set, get, child, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -1129,7 +1150,7 @@ window.toggleGameSort = () => {
 
         <div style="display:flex; gap:6px;">
             <a href="control.html?gameId=${id}" class="btn-primary">進入控制台</a>
-            <a href="${base}/overlay.html?gameId=${id}" target="_blank" class="btn-outline">
+            <a href="overlay.html?gameId=${id}" target="_blank" class="btn-outline">
                 開啟疊加
             </a>
             <button class="btn-danger" onclick="deleteGame('${id}')">刪除</button>
@@ -1253,6 +1274,10 @@ window.toggleGameSort = () => {
       onValue(ref(db, basePath), (snapshot) => {
           const data = snapshot.val();
           if(!data) return;
+
+        // ⭐⭐⭐ 就插在這裡 ⭐⭐⭐
+            console.log("teams", data.teams);
+            console.log("rosters", data.rosters);
 
           if(data.title !== undefined) {
               document.getElementById('title-input').value = data.title;
@@ -1537,7 +1562,9 @@ if (current) {
 
   function renderAllLineups() {
       ['away', 'home'].forEach(team => {
-          const roster = localState.rosters[team] || {};
+          const roster = (localState.rosters && localState.rosters[team])
+            ? localState.rosters[team]
+            : [];
           const lineup = localState.lineups[team] || {};
           let pName = "--", pNum = "--";
           if (lineup.pitcherIndex !== undefined && roster[lineup.pitcherIndex]) { pName = roster[lineup.pitcherIndex].name || "(未命名)"; pNum = roster[lineup.pitcherIndex].num || "-"; }
@@ -1851,7 +1878,71 @@ window.deleteGame = async (gameId) => {
     await set(ref(db, `games/${gameId}`), null);
 };
 
+// ⭐⭐⭐ 就貼在這裡 ⭐⭐⭐
+window.swapTeams = async () => {
 
+    const snap = await get(ref(db, basePath));
+    const data = snap.val();
+    if (!data) return;
+
+    // ===== 1️⃣ 基本交換 =====
+    const newTeams = {
+        away: data.teams.home,
+        home: data.teams.away
+    };
+
+    const newRosters = {
+        away: data.rosters.home,
+        home: data.rosters.away
+    };
+
+    const newLineups = {
+        includePitcher: data.lineups?.includePitcher || false,
+        away: data.lineups?.home || {},
+        home: data.lineups?.away || {}
+    };
+
+    const newPitchCount = {
+        away: data.pitchCount?.home || 0,
+        home: data.pitchCount?.away || 0
+    };
+
+    // ===== 2️⃣ 打者交換 =====
+    let newCurrentBatter = null;
+    if (data.currentBatter) {
+        newCurrentBatter = {
+            team: data.currentBatter.team === 'away' ? 'home' : 'away',
+            rosterIndex: data.currentBatter.rosterIndex
+        };
+    }
+
+    // ===== 3️⃣ ⭐ 投手修正（關鍵） =====
+    let newCurrentPitcherId = data.currentPitcherId || null;
+
+    // （不用換 pitchers 結構，但 currentPitcher 會跟著 team 變）
+
+    // ===== 4️⃣ ⭐ 攻守方向修正（重要） =====
+    let newGameInfo = data.gameInfo || {};
+    if (newGameInfo) {
+        newGameInfo = {
+            ...newGameInfo,
+            isTop: !newGameInfo.isTop   // ⭐ 上下半局反轉
+        };
+    }
+
+    // ===== 5️⃣ 寫入 =====
+    await update(ref(db, basePath), {
+        teams: newTeams,
+        rosters: newRosters,
+        lineups: newLineups,
+        pitchCount: newPitchCount,
+        currentBatter: newCurrentBatter,
+        currentPitcherId: newCurrentPitcherId,
+        gameInfo: newGameInfo
+    });
+
+    alert("已完成主客隊對調（含攻守修正）");
+};
 
 // ===== URL 快速複製 =====
 function getBaseUrl(gameId) {
@@ -1903,13 +1994,21 @@ window.addEventListener('load', () => {
 </script>
 
 <script>
-    window.getBasePath = function() {
-    const path = location.pathname.split('/').filter(Boolean);
-    return path.length > 0 ? `/${path[0]}` : '';
+    function getBasePath() {
+    const path = location.pathname;
+
+    // localhost（開發用）
+    if (location.hostname === "127.0.0.1" || location.hostname === "localhost") {
+        return "";
+    }
+
+    // GitHub Pages（repo）
+    const parts = path.split("/");
+    return parts.length > 2 ? "/" + parts[1] : "";
 }
 
     /* ===== 懸浮控制 ===== */
-window.addEventListener('load', () => {
+    window.addEventListener('load', () => {
 
     const wrapper = document.getElementById('preview-wrapper');
     const toggle = document.getElementById('preview-stick-toggle');
@@ -2024,8 +2123,6 @@ function switchPreview(type, el) {
     // ⭐ 3. 原本邏輯（不要動）
     const gameId = new URLSearchParams(window.location.search).get('gameId') || '';
     const iframe = document.getElementById('preview-frame');
-    const base = location.origin + getBasePath();
-
 
     let url = '';
 
