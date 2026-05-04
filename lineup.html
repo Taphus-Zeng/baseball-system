@@ -102,6 +102,16 @@
 </div>
 
 <script type="module">
+
+    function getTeamsByInning(gameInfo) {
+    const isTop = gameInfo?.isTop ?? true;
+
+    return {
+        batting: isTop ? 'away' : 'home',   // 打擊
+        fielding: isTop ? 'home' : 'away'   // 守備
+    };
+}
+
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -122,9 +132,9 @@
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
-  const targetTeam = urlParams.get('team'); 
+  const urlTeam = urlParams.get('team'); // fallback 用
   
-  if (!gameId || !targetTeam) {
+  if (!gameId) {
       document.getElementById('team-title').innerText = "錯誤：缺少賽事或隊伍參數";
   } else {
       loadDefensiveLineup();
@@ -141,11 +151,16 @@
       const currentTheme = data.theme || 'modern';
       document.body.className = `theme-${currentTheme}`;
       
-      const teamName = data.teams?.[targetTeam]?.name || "未命名隊伍";
-      document.getElementById('team-title').innerText = `${teamName} - 先發守備陣容`;
+      const teams = getTeamsByInning(data.gameInfo);
 
-      const rosterData = data.rosters?.[targetTeam] || {};
-      const lineupData = data.lineups?.[targetTeam] || {};
+        // ⭐ 守備一定用 fielding
+        const team = teams.fielding || urlTeam;
+
+        const teamName = data.teams?.[team]?.name || "未命名隊伍";
+            document.getElementById('team-title').innerText = `${teamName} - 先發守備陣容`;
+
+        const rosterData = data.rosters?.[team] || {};
+        const lineupData = data.lineups?.[team] || {};
       const defPositions = { 'P': null, 'C': null, '1B': null, '2B': null, '3B': null, 'SS': null, 'LF': null, 'CF': null, 'RF': null, 'DH': null };
 
       if (lineupData.pitcherIndex !== undefined && lineupData.pitcherIndex !== -1) {
