@@ -5,6 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>轉播疊加畫面 (向量超清 + 三層結構版)</title>
     <style>
+        /* ===== Theme Variable Bridge ===== */
+
+        :root {
+         --field-bg: url('./themes/modern/field.png');
+        --primary: #00c3ff;
+        --accent: #ffffff;
+        --text: #ffffff;
+        }
+
+        /* 套用區域（例：你的球場 / 背景容器） */
+        .field,
+        .lineup-container,
+        .batting-container {
+        background-image: var(--field-bg);
+        background-size: cover;   /* ⭐ 改這個 */
+        background-repeat: no-repeat;
+        background-position: center;
+        }
+
+        /* 共用文字色 */
+        body {
+            color: var(--text);
+        }
+
+
+    </style>
+    
+    
+    <style>
         /* 基礎透明背景與字型 */
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
@@ -17,7 +46,16 @@
         /* 容器 */
         #scale-wrapper { position: absolute; top: 0; left: 0; transform-origin: bottom right; padding: 20px; display: block;} /* 新增 display: none 等待登入 */
 
-        .scoreboard { width: 460px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid #aaa; }
+        .scoreboard { 
+            width: 460px; 
+            display: flex; 
+            flex-direction: column; 
+            border-radius: 8px; 
+            overflow: hidden;
+            background: transparent;   /* ⭐ 加這行 */ 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+            border: 1px solid #aaa; 
+        }
         
         /* ========================================== */
         /* 1. 最上方區塊：投手資訊列 */
@@ -88,13 +126,13 @@
     </style>
 </head>
 
-<body>
+<body class="theme-modern">
 
 <!-- 登入層 -->
 
 
 <div id="scale-wrapper">
-    <div class="scoreboard">
+    <div class="scoreboard field">
         
         <div class="pitcher-row-overlay" id="pitcher-container">
             <div class="pitcher-info-overlay"><span class="pitcher-label-overlay">P</span><span class="pitcher-name-overlay" id="overlay-pitcher-name">--</span></div>
@@ -154,6 +192,15 @@
 <!-- 移除多餘的隱藏 div 以免干擾 DOM -->
 
 <script type="module">
+
+    function getTeamsByInning(gameInfo) {
+    const isTop = gameInfo?.isTop ?? true;
+
+    return {
+        batting: isTop ? 'away' : 'home',   // 打擊
+        fielding: isTop ? 'home' : 'away'   // 守備
+    };
+    }
 
 // 修改匯入邏輯以支援 auth 與 auth 狀態監聽
 import { db, auth } from "./firebase.js";
