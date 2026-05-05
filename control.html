@@ -521,6 +521,62 @@
     min-width: 60px;      /* ⭐ 按鈕寬度統一 */
 }
 /* ===== Pitch 控制區容器 ===== */
+/* ===== 工具列（縮小版） ===== */
+.top-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 20px;
+    padding: 8px 16px;
+
+    background: #f5f7fa;
+    border-bottom: 1px solid #ddd;
+
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.small-input {
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 14px;
+    width: 100px;
+}
+
+.small-btn {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 13px;
+}
+
+.small-btn.primary {
+    background: #3498db;
+    color: #fff;
+    border: none;
+}
+
+.offset-btn {
+    width: 28px;
+    height: 28px;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    background: #2c3e50;
+    color: #fff;
+    border: none;
+
+    border-radius: 4px;
+    cursor: pointer;
+}
 .pitch-control-container {
     display: flex;
     align-items: center;
@@ -566,29 +622,7 @@
 </head>
 <body>
 
-<!-- ===== 🎬 Preview 視窗 ===== -->
-<div id="preview-wrapper">
 
-    <div class="preview-header">
-        Preview
-        <div class="preview-controls">
-            <button class="preview-btn active" onclick="switchPreview('scoreboard', this)">Scoreboard</button>
-            <button class="preview-btn" onclick="switchPreview('lineup', this)">Lineup</button>
-            <button class="preview-btn" onclick="switchPreview('batting', this)">Batting</button>
-            <label>
-                Stick/懸浮 <input type="checkbox" id="preview-stick-toggle">
-            </label>
-        </div>
-    </div>
-
-    <div class="preview-body">
-        <iframe id="preview-frame"></iframe>
-    </div>
-
-    <!-- ⭐ 右側 resize 區 -->
-    <div id="resize-handle"></div>
-
-</div>
 
 <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #101451; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
     <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; color: #333; text-align: center;">
@@ -655,20 +689,54 @@
 </div>
 
 <div id="controller-view">
-    <div class="advanced-section">
-        <div class="panel title-panel">
-            <h3 onclick="toggleGameSort()" style="cursor:pointer;" title="點擊切換 新->舊 / 舊->新">🏆 進行中/已建立賽事 ↕️</h3>
-            <div class="input-row">
-                <input type="text" id="title-input" placeholder="例如：黑豹旗全國高中棒球大賽">
-                <button class="btn-action" onclick="updateTitle()">更新標題</button>
-            </div>
-        </div>
-        <div class="panel">
-            <h3>TAG One Radar 測速整合</h3>
-            <input type="number" id="speedInput" placeholder="輸入球速 (km/h)">
-            <button class="btn-action" onclick="updateSpeed()">發送球速</button>
+    <!-- ===== 🎬 Preview 視窗 ===== -->
+    <div id="preview-wrapper">
+    <div class="preview-header">
+        Preview
+        <div class="preview-controls">
+            <button class="preview-btn active" onclick="switchPreview('scoreboard', this)">Scoreboard</button>
+            <button class="preview-btn" onclick="switchPreview('lineup', this)">Lineup</button>
+            <button class="preview-btn" onclick="switchPreview('batting', this)">Batting</button>
+            <label>
+                Stick/懸浮 <input type="checkbox" id="preview-stick-toggle">
+            </label>
         </div>
     </div>
+
+    <div class="preview-body">
+        <iframe id="preview-frame"></iframe>
+    </div>
+
+    <!-- ⭐ 右側 resize 區 -->
+    <div id="resize-handle"></div>
+    </div>
+
+    <div class="top-toolbar">
+
+    <!-- 🏆 賽事 -->
+    <div class="toolbar-section">
+        <span>🏆</span>
+        <input type="text" id="title-input" class="small-input">
+        <button onclick="updateTitle()" class="small-btn">更新</button>
+    </div>
+
+    <!-- 🎯 Radar -->
+    <div class="toolbar-section">
+        <span>Radar</span>
+
+    <input type="number" id="speedInput" placeholder="km/h" class="small-input">
+
+    <button onclick="updateSpeed()" class="small-btn primary">發送</button>
+
+    <span style="margin-left:10px;">微調球速</span>
+
+    <input type="text" id="offsetDisplay" class="small-input" style="width:30px;" readonly>
+
+    <button onclick="adjustSpeed(-1)" class="offset-btn">-</button>
+    <button onclick="adjustSpeed(1)" class="offset-btn">+</button>
+    </div>
+    </div>
+
     <div class="camerafi-control-bar">
         <div class="team-section">
             <div class="team-col">
@@ -1158,11 +1226,11 @@ window.toggleGameSort = () => {
 
         <div style="display:flex; gap:6px;">
             <button class="btn-outline" onclick="copySpeedUrl('${id}')">
-                Speed URL
+                Speed Json
             </button>
 
             <button class="btn-outline" onclick="copyOnlySpeedUrl('${id}')">
-                Only Speed URL
+            📋 Only Speed
             </button>
         </div>
     </div>
@@ -1838,20 +1906,25 @@ if (current) {
   window.resetCount = () => update(ref(db, `${basePath}/count`), { balls: 0, strikes: 0 });
   window.toggleBase = async (base) => { const s = await get(child(dbRef, `${basePath}/bases/${base}`)); update(ref(db, `${basePath}/bases`), { [base]: !(s.exists()?s.val():false) }); };
   window.updateSpeed = async () => {
-    const s = parseInt(document.getElementById('speedInput').value);
-    if (!s) return;
+
+    const raw = parseInt(document.getElementById('speedInput').value);
+    if (!raw) return;
+
+    let finalSpeed = raw + radarOffset;
+
+    if (finalSpeed < 0) finalSpeed = 0;
 
     // 寫入即時速度
-    await update(ref(db, `${basePath}/radar`), { speed: s });
+    await update(ref(db, `${basePath}/radar`), { speed: finalSpeed });
 
-    // ===== 寫入 log =====
+    // ===== log =====
     const logRef = push(ref(db, `${basePath}/radar_log`));
     await set(logRef, {
-        speed: s,
+        speed: finalSpeed,
         time: Date.now()
     });
 
-    // ===== 更新投手 max speed =====
+    // ===== max speed =====
     const pitcherIdSnap = await get(child(dbRef, `${basePath}/currentPitcherId`));
     const pitcherId = pitcherIdSnap.val();
 
@@ -1860,13 +1933,13 @@ if (current) {
         const snap = await get(child(dbRef, statsRef));
         const stats = snap.exists() ? snap.val() : {};
 
-        if (!stats.maxSpeed || s > stats.maxSpeed) {
+        if (!stats.maxSpeed || finalSpeed > stats.maxSpeed) {
             await update(ref(db, statsRef), {
-                maxSpeed: s
+                maxSpeed: finalSpeed
             });
         }
     }
-    };
+};
   // ===== 刪除功能 =====
 window.deleteTeam = async (teamId, teamName) => {
     if (!confirm(`確定要刪除隊伍「${teamName}」嗎？`)) return;
@@ -1956,8 +2029,24 @@ window.copySpeedUrl = (gameId) => {
 };
 
 window.copyOnlySpeedUrl = (gameId) => {
-    const url = `${location.origin}/only_speed.html?gameId=${gameId}`;
-    navigator.clipboard.writeText(url);
+
+    if (!gameId) {
+        alert("⚠️ gameId 不存在");
+        return;
+    }
+
+    // ⭐ 正確 base（支援 localhost + github）
+    const base = location.origin + getBasePath();
+
+    const url = `${base}/only_speed.html?gameId=${gameId}`;
+
+    navigator.clipboard.writeText(url).then(() => {
+        alert("✅ Only Speed URL 已複製");
+        console.log("OnlySpeed URL:", url);
+    }).catch(err => {
+        console.error("copy fail:", err);
+        alert("❌ 複製失敗");
+    });
 };
 
 window.addEventListener('load', () => {
@@ -2045,6 +2134,19 @@ window.addEventListener('load', () => {
     }
 
 });
+
+// ===== Radar Offset =====
+let radarOffset = 0;
+
+window.adjustSpeed = (delta) => {
+    radarOffset += delta;
+
+    // ⭐ 更新顯示欄位
+    document.getElementById("offsetDisplay").value =
+        (radarOffset > 0 ? "+" : "") + radarOffset;
+
+    console.log("Radar Offset =", radarOffset);
+};
 
 window.switchTab = function(tabName, el) {
 
@@ -2158,7 +2260,7 @@ function switchPreview(type, el) {
 
     };
 // ⭐⭐⭐ 放在全域（不能放在 function 裡）
-
+document.getElementById("offsetDisplay").value = radarOffset;
 </script>
 
 
