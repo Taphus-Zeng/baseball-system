@@ -543,12 +543,28 @@
     align-items: center;
     gap: 8px;
 }
-
+/* ⭐ 讓左側賽事名稱區塊吃滿空間 */
+.top-toolbar .toolbar-section:first-child {
+    flex: 1;
+}
+/* ⭐ 放大賽事名稱輸入框 */
+#title-input {
+    flex: 1;
+    min-width: 220px;
+    height: 32px;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
 .small-input {
     height: 30px;
     padding: 4px 8px;
     font-size: 14px;
     width: 100px;
+        border-radius: 6px;        /* ⭐ 新增 */
+    border: 1px solid #ccc;    /* ⭐ 建議一起補 */
 }
 
 .small-btn {
@@ -715,8 +731,8 @@
 
     <!-- 🏆 賽事 -->
     <div class="toolbar-section">
-        <span>🏆</span>
-        <input type="text" id="title-input" class="small-input">
+        <span>🏆賽事名稱</span>
+        <input type="text" id="title-input" class="large-input">
         <button onclick="updateTitle()" class="small-btn">更新</button>
     </div>
 
@@ -851,8 +867,6 @@
 </div>
         </div>
     </div>
-
-</div>
 
     <div class="player-info-container">
         <div class="player-header-bar">
