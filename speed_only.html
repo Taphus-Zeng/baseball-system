@@ -1,175 +1,188 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>純球速疊加畫面 (右下錨定與細緻邊框版)</title>
-    <style>
-        /* 基礎透明背景，強制向量抗鋸齒渲染 */
-        body { 
-            margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
-            font-family: "Arial", "Helvetica", "Microsoft JhengHei", sans-serif; 
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-        }
-        
-        /* ✅ 修改 1：定位改為右下角錨定，基準點設為 bottom right */
-        #scale-wrapper { 
-            position: absolute; 
-            bottom: 0;  /* 錨定底部 */
-            right: 0;   /* 錨定右側 */
-            padding: 20px; 
-            width: 450px;    
-            height: 250px;   
-            display: flex;
-            align-items: flex-end;    /* 內容靠下 */
-            justify-content: flex-end; /* 內容靠右 */
-            transform-origin: bottom right; /* ✅ 縮放基準點改為右下角 */
-        }
+<meta charset="UTF-8">
+<title>Only Speed</title>
 
-        .speed-box {
-            background: transparent; 
-            padding: 15px 40px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0; 
-            transform: translateY(20px);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-        }
+<style>
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+}
 
-        .speed-box.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
+/* 🔥 外框（避免裁切版） */
+#container {
+    width: 100%;
+    height: 100%;
 
-        .speed-val {
-            color: #FFFF00;
-            font-size: 190px; 
-            font-weight: bold; 
-            font-style: italic;
-            line-height: 1; 
-            text-shadow: 4px 4px 8px rgba(0,0,0,0.8); 
-            letter-spacing: 2px;
-            transition: color 0.2s, -webkit-text-stroke 0.2s; 
-        }
+    box-sizing: border-box;
 
-        /* ✅ 修改 2：黃色邊框細化為 0.5px */
-        .speed-val.fire {
-            color: #FF1111; 
-            -webkit-text-stroke: 0.5px #FFFF00; /* 提升精緻度 */
-            text-shadow: 0 0 35px rgba(255, 0, 0, 0.8), 8px 8px 15px rgba(0,0,0,0.8); 
-        }
-    </style>
+    /* 🔥 安全邊距（關鍵） */
+    padding: 10px;
+
+    background: #000;
+    border: 1px solid #FFD700;
+
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+/* 🔥 內容（右下角） */
+#speed-wrapper {
+    display: flex;
+    align-items: flex-end;
+}
+
+/* 🔥 數字 */
+#speed {
+    font-size: 36vw;
+    font-style: italic;
+    font-weight: normal;
+
+    color: #FFD700;
+
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+    line-height: 0.9;
+
+    /* 🔥 防跳動 */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+
+    min-width: 3.2ch;
+    text-align: right;
+}
+
+/* 🔥 單位 */
+#unit {
+    font-size: 15vw;
+    font-style: italic;
+    color: #ffffff;
+
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+    margin-left: 1vw;
+    margin-bottom: 2vw;
+}
+
+/* 🔥 高球速 */
+.high-speed #speed {
+    color: #ff2d2d;
+    transform: scale(1.2);
+}
+
+/* 🔥 淡出 */
+.fade-in { opacity: 1; transition: 0.2s; }
+.fade-out { opacity: 0; transition: 0.6s; }
+
+</style>
 </head>
+
 <body>
 
-<div id="scale-wrapper">
-    <div class="speed-box active" id="speed-container">
-        <span class="speed-val fire" id="speed-text">155</span>
+<div id="container">
+    <div id="speed-wrapper">
+        <div id="speed">152</div>
+        <div id="unit">km/h</div>
     </div>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  // TODO: 貼上您的 Firebase Config
-  const firebaseConfig = {
-  apiKey: "AIzaSyBDc712j6cY3VoL2YxvTk8rnwqDfcr28UA",
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
   authDomain: "baseball-scoreboard-294d8.firebaseapp.com",
   databaseURL: "https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "baseball-scoreboard-294d8",
-  storageBucket: "baseball-scoreboard-294d8.firebasestorage.app",
-  messagingSenderId: "179359096477",
-  appId: "1:179359096477:web:8188f897371651442e7e74"
-  };
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get('gameId');
-  const basePath = gameId ? `games/${gameId}/radar` : 'scoreboard/radar';
+const params = new URLSearchParams(location.search);
+const gameId = params.get("gameId");
 
-  let customScale = 0.3;
-  if (urlParams.has('scale')) {
-      const parsedScale = parseFloat(urlParams.get('scale'));
-      if (!isNaN(parsedScale) && parsedScale > 0) customScale = parsedScale;
-  }
+console.log("🔥 only_speed gameId =", gameId);
 
-  let currentSpeed = "";
+let path = gameId
+    ? `games/${gameId}/radar/speed`
+    : "scoreboard/radar/speed";
 
-  // ✅ 修改 3：預設顯示時間延長至 60000 毫秒 (60 秒)
-  let hideTimeout = setTimeout(() => {
-      document.getElementById('speed-container').classList.remove('active');
-      document.getElementById('speed-text').innerText = "--";
-      document.getElementById('speed-text').classList.remove('fire');
-  }, 60000);
+// ⭐ fallback（防 OBS 抓不到）
+let fallbackPath = "scoreboard/radar/speed";
 
-  onValue(ref(db, basePath), (snapshot) => {
-      const radarData = snapshot.val();
-      if (!radarData) return;
 
-      const speedBox = document.getElementById('speed-container');
-      const speedText = document.getElementById('speed-text');
-      const offset = radarData.offset ? parseInt(radarData.offset) : 0;
+const container = document.getElementById("container");
+const speedEl = document.getElementById("speed");
 
-      if (radarData.speed && radarData.speed !== "") {
-          if (radarData.speed !== currentSpeed) {
-              currentSpeed = radarData.speed;
-              let rawSpeed = parseInt(radarData.speed);
-              let finalSpeedText = radarData.speed; 
-              let finalSpeedNum = 0;
-              
-              if (!isNaN(rawSpeed)) {
-                  finalSpeedNum = rawSpeed + offset;
-                  finalSpeedText = finalSpeedNum.toString();
-              }
-              
-              speedText.innerText = finalSpeedText;
-              if (finalSpeedNum > 150) speedText.classList.add('fire');
-              else speedText.classList.remove('fire');
-              
-              speedBox.classList.add('active');
-              if (hideTimeout) clearTimeout(hideTimeout);
-              hideTimeout = setTimeout(() => {
-                  speedBox.classList.remove('active');
-                  currentSpeed = ""; 
-                  update(ref(db, basePath), { speed: "" });
-              }, 3000);
-          }
-      }
-  });
+let isPreviewMode = true;
+let hasRealData = false;
 
-  function applyScale() {
-      const wrapper = document.getElementById('scale-wrapper');
-      const designW = 450; 
-      const designH = 250; 
-      const paddingOffset = 40; 
-      
-      const targetW = designW + paddingOffset;
-      const targetH = designH + paddingOffset; 
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
-      
-      const baseScale = Math.min(winW / targetW, winH / targetH);
-      const finalScale = baseScale * customScale;
-      
-      wrapper.style.transform = 'none';
-      wrapper.style.zoom = finalScale;
-      
-      // ✅ 因為基準點在右下角，我們將 wrapper 固定在視窗右下
-      wrapper.style.top = 'auto';
-      wrapper.style.left = 'auto';
-      wrapper.style.bottom = '0px';
-      wrapper.style.right = '0px';
-  }
-  
-  window.addEventListener('resize', applyScale);
-  applyScale();
-  setInterval(applyScale, 500);
+setTimeout(() => {
+    isPreviewMode = false;
+}, 60000);
+
+let hideTimer = null;
+
+function showSpeed(speed) {
+    if (!speed || speed === 0) return;
+
+    speedEl.innerText = speed;
+
+    container.classList.remove("fade-out");
+    container.classList.add("fade-in");
+
+    if (Number(speed) > 150) {
+        container.classList.add("high-speed");
+    } else {
+        container.classList.remove("high-speed");
+    }
+
+    if (hideTimer) clearTimeout(hideTimer);
+
+    hideTimer = setTimeout(() => {
+        container.classList.remove("fade-in");
+        container.classList.add("fade-out");
+    }, 6000);
+}
+
+onValue(ref(db, path), (snapshot) => {
+    const speed = snapshot.val();
+
+    console.log("speed(main):", speed);
+
+    // ⭐ 有真實資料
+    if (speed) {
+        hasRealData = true;
+        showSpeed(speed);
+        return;
+    }
+
+    // ⭐ 沒資料 → fallback
+    onValue(ref(db, fallbackPath), (snap2) => {
+        const fbSpeed = snap2.val();
+
+        console.log("speed(fallback):", fbSpeed);
+
+        if (fbSpeed) {
+            hasRealData = true;
+            showSpeed(fbSpeed);
+            return;
+        }
+
+        // ⭐ ⭐ ⭐ 重點：只有在 preview 才顯示假數值
+        if (!hasRealData && isPreviewMode) {
+            showSpeed(120);  // 👈 可改你要的預設值
+        }
+    });
+});
 </script>
+
 </body>
 </html>
