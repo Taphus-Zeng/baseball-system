@@ -167,7 +167,12 @@
         .btn-nav:active { background-color: #dee2e6; transform: scale(0.95); }
 
         /* --- 3. 壘包區塊 --- */
-        .base-col { display: flex; flex-direction: column; align-items: flex-start; width: 140px; }
+        .base-col { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 140px; 
+        }
         .bases-container { position: relative; width: 110px; height: 110px; margin: 5px auto 0; }
         .base-diamond { 
             position: absolute; 
@@ -387,10 +392,9 @@
 
 /* ===== Preview 主體（唯一尺寸來源） ===== */
 #preview-wrapper {
-    position: relative;   /* ⭐ 預設：跟頁面 */
-    width: 640px;
+    position: relative;
+    width: min(640px, 100%);
     margin: 20px 0;
-
     background: #111;
     border: 1px solid #333;
     border-radius: 6px;
@@ -425,14 +429,17 @@
 
 /* ⭐ 右側 resize */
 #resize-handle {
+
     position: absolute;
     top: 0;
     right: 0;
 
-    width: 8px;
+    width: 28px;
     height: 100%;
 
     cursor: ew-resize;
+
+    z-index: 50;
 }
 
 /* ===== Pitch Header ===== */
@@ -533,7 +540,7 @@
     background: #f5f7fa;
     border-bottom: 1px solid #ddd;
 
-    position: sticky;
+    position: relative;
     top: 0;
     z-index: 999;
 }
@@ -634,6 +641,42 @@
     display: flex;
     gap: 10px;   /* ⭐ 按鈕間距放大 */
 }
+/* ===== 平板 / 手機 ===== */
+@media (max-width: 1024px) {
+
+    .top-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .toolbar-section {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    /* 賽事名稱輸入框 */
+    #title-input {
+        min-width: 0;
+        width: 100%;
+    }
+
+    /* Radar input */
+    .small-input {
+        width: 80px;
+    }
+
+    /* 微調 */
+    #offsetDisplay {
+        width: 50px !important;
+    }
+
+    /* 按鈕 */
+    .small-btn,
+    .offset-btn {
+        flex-shrink: 0;
+    }
+}
     </style>
 </head>
 <body>
@@ -732,7 +775,7 @@
     <!-- 🏆 賽事 -->
     <div class="toolbar-section">
         <span>🏆賽事名稱</span>
-        <input type="text" id="title-input" class="large-input">
+        <input type="text" id="title-input" class="medium-input">
         <button onclick="updateTitle()" class="small-btn">更新</button>
     </div>
 
@@ -2037,9 +2080,24 @@ function getBaseUrl(gameId) {
 }
 
 window.copySpeedUrl = (gameId) => {
-    const url = `https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/${gameId}/radar.json`;
-    navigator.clipboard.writeText(url);
-    alert("已複製 Speed URL");
+
+    if (!gameId) {
+        alert("⚠️ gameId 不存在");
+        return;
+    }
+
+    const url =
+`https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/${gameId}/radar/speed.json`;
+
+    navigator.clipboard.writeText(url)
+        .then(() => {
+            alert("✅ Speed Json URL 已複製");
+            console.log("Speed URL:", url);
+        })
+        .catch(err => {
+            console.error(err);
+            alert("❌ 複製失敗");
+        });
 };
 
 window.copyOnlySpeedUrl = (gameId) => {
@@ -2068,28 +2126,63 @@ window.addEventListener('load', () => {
     const handle = document.getElementById("resize-handle");
     
     let resizing = false;
-    handle.addEventListener("mousedown", () => {
+
+// ===== 開始拖曳 =====
+function startResize() {
     resizing = true;
-    });
+}
+
+// ===== 結束拖曳 =====
+function stopResize() {
+    resizing = false;
+}
+
+// ===== 真正 resize =====
+function doResize(clientX) {
+
+    if (!resizing) return;
+
+    const rect = wrapper.getBoundingClientRect();
+
+    let newWidth = clientX - rect.left;
+
+    // 最小寬度
+    newWidth = Math.max(320, newWidth);
+
+    // 最大寬度
+    const maxWidth = window.innerWidth - rect.left - 20;
+
+    newWidth = Math.min(maxWidth, newWidth);
+
+    wrapper.style.width = newWidth + "px";
+
+    localStorage.setItem("previewWidth", newWidth);
+}
+
+    // ===== PC =====
+    handle.addEventListener("mousedown", startResize);
+
     document.addEventListener("mousemove", (e) => {
-        if (!resizing) return;
-
-        const rect = wrapper.getBoundingClientRect();
-
-        let newWidth = e.clientX - rect.left;
-
-    // ⭐ 最大不能超過 viewport
-        const maxWidth = window.innerWidth - rect.left - 20;
-
-        newWidth = Math.max(320, Math.min(maxWidth, newWidth));
-
-        wrapper.style.width = newWidth + "px";
-
-        localStorage.setItem("previewWidth", newWidth);
+    doResize(e.clientX);
     });
-    document.addEventListener("mouseup", () => {
-        resizing = false;
-    });
+
+    document.addEventListener("mouseup", stopResize);
+
+    // ===== 手機 / 平板 =====
+    handle.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    startResize();
+    }, { passive: false });
+
+    document.addEventListener("touchmove", (e) => {
+
+    if (!e.touches[0]) return;
+
+    doResize(e.touches[0].clientX);
+
+    }, { passive: true });
+
+    document.addEventListener("touchend", stopResize);
 });
 
 
@@ -2263,7 +2356,10 @@ function switchPreview(type, el) {
         const h = body.scrollHeight;
 
         if (w && h) {
-            iframe.style.height = (iframe.offsetWidth * (h / w)) + "px";
+            const wrapperWidth =
+            document.getElementById('preview-wrapper').clientWidth;
+            iframe.style.height =
+                (wrapperWidth * (h / w)) + "px";
         }
 
     } catch (e) {
