@@ -9,14 +9,34 @@
         body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Georgia", "Microsoft JhengHei", serif; }
         
         /* 自動縮放的外掛容器 */
-        #scale-wrapper { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: top left; }
+        #scale-wrapper {
+
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        display: inline-block;
+
+        transform-origin: top left;
+        }
 
         /* 全透明背景，讓直播畫面完全透出 */
-        .overlay-container { width: 100%; height: 100%; background: transparent; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-
+        .overlay-container {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
+        }
         /* 蒸氣龐克大外框容器 */
-        .board-container { position: relative; width: 450px; height: 680px; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8)); }
-        
+        .board-container {
+            position: relative;
+            width: 450px;
+            height: 680px;
+            filter: none;
+            padding: 20px;
+            box-sizing: border-box;
+}    
         /* 讀取專屬背景圖 */
         .board-bg { width: 100%; height: 100%; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; }
 
@@ -170,6 +190,19 @@
             90% { transform: rotateX(-5deg); opacity: 1; }
             100% { transform: rotateX(0deg); opacity: 1; }
         }
+        @keyframes overlayFadeOut {
+            from {
+        opacity: 1;
+        }
+            to {
+        opacity: 0;
+        }
+        }
+
+        .overlay-hide {
+            animation: overlayFadeOut 1s ease forwards;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -297,26 +330,27 @@
   }
 
   function applyScale() {
-      const wrapper = document.getElementById('scale-wrapper');
-      const paddingOffset = 160; 
-      const targetW = 1280 + paddingOffset;
-      const targetH = 720 + paddingOffset;
-      
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
-      
-      const scale = Math.min(winW / targetW, winH / targetH);
-      wrapper.style.transform = `scale(${scale})`;
-      
-      const xOffset = (winW - 1280 * scale) / 2;
-      const yOffset = (winH - 720 * scale) / 2;
-      wrapper.style.left = `${Math.max(0, xOffset)}px`;
-      wrapper.style.top = `${Math.max(0, yOffset)}px`;
-  }
+
+    const wrapper = document.getElementById('scale-wrapper');
+    const targetW = wrapper.offsetWidth;
+    const targetH = wrapper.offsetHeight;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    const scale = Math.min(
+        winW / targetW,
+        winH / targetH
+    );
+
+    wrapper.style.transform = `scale(${scale})`;
+}
   
   window.addEventListener('resize', applyScale);
   applyScale();
-  setInterval(applyScale, 500);
+  window.addEventListener('load', applyScale);
+  // ⭐ 10秒後自動淡出
+    setTimeout(() => {
+    document.body.classList.add('overlay-hide');
+    }, 10000);
 </script>
 </body>
 </html>
