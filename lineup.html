@@ -99,6 +99,21 @@
             0% { opacity: 0; transform: scale(0.5) translateY(30px); } 
             100% { opacity: 1; transform: scale(1) translateY(0); } 
         }
+        /* ====== Fade Out 消失動畫 ====== */
+        @keyframes overlayFadeOut {
+        from {
+        opacity: 1;
+        }
+
+        to {
+        opacity: 0;
+        }
+        }
+
+        .overlay-hide {
+        animation: overlayFadeOut 1s ease forwards;
+        pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -244,6 +259,12 @@
   applyScale();
   // 避免字型或圖片晚讀取造成尺寸偏移，定期補償
   setInterval(applyScale, 500);
+  // ⭐ 10秒後自動淡出
+    setTimeout(() => {
+    document.body.classList.add('overlay-hide');
+
+}, 10000);
+
 </script>
 </body>
 </html>
