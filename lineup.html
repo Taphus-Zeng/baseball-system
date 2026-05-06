@@ -8,19 +8,45 @@
         /* ✅ 1. 基礎背景設定
            這裡將 body 背景改為淺色 (白色)，並設定 rgba 的透明度。
            0.8 代表 80% 的不透明度。如果您覺得太白遮住太多直播畫面，可以將 0.8 改為 0.5 或 0.2 來增加透視感！ */
-        body { margin: 0; padding: 0; overflow: hidden; background-color: rgba(255, 255, 255, 0.8); font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; }
+        body { margin: 0; padding: 0; overflow: hidden; 
+            /* ❌ 舊-背景固定顏色 */
+            /*background-color: rgba(255, 255, 255, 0.8); */
+            /*background-color: rgba(255, 255, 255, var(--bg-alpha, 0.6));*/
+            background: transparent;
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; }
         
         /* 鎖定長寬比的虛擬畫布，所有元素都在這張 1280x720 的畫布上作畫 */
-        #scale-wrapper { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: top left; }
+        #scale-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: inline-block;
+            transform-origin: top left;
+        }
 
         /* 移除原本的深色遮罩，改為純粹的排版容器 */
-        .overlay-container { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; }
+        .overlay-container {
+
+            position: relative;
+
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+        }
         
         /* 頂部標題列 (維持白字配黑陰影，在淺色背景上依然能清晰跳出) */
         .title-banner { margin-top: 40px; background: linear-gradient(90deg, transparent, rgba(0, 158, 219, 0.8), transparent); width: 80%; text-align: center; padding: 15px 0; color: white; font-size: 42px; font-weight: bold; letter-spacing: 5px; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); opacity: 0; animation: fadeInDown 1s ease-out 0.2s forwards; z-index: 20; }
 
         /* 球場底圖容器 */
-        .field-container { position: relative; width: 900px; height: 600px; margin-top: 20px; }
+        .field-container {
+            position: relative;
+
+            width: 900px;
+            height: 600px;
+
+            padding: 40px;
+            box-sizing: border-box;
+        }
         
         /* 讀取您上傳的專屬球場圖片 */
         .field-bg { width: 100%; height: 100%; object-fit: contain; opacity: 0; filter: drop-shadow(0 0 15px rgba(0, 200, 255, 0.6)); animation: fadeIn 1.5s ease-out 0.5s forwards; }
@@ -195,28 +221,23 @@
   });
 }
   // ✅ 2. 核心縮放引擎：加入邊界緩衝區防裁切
-  function applyScale() {
-      const wrapper = document.getElementById('scale-wrapper');
-      
-      // 故意在數學計算上，把原本的 1280x720「加碼」160px
-      // 這樣等於強迫系統在上下左右各留出 80px 的「隱形防護罩邊界」
-      const paddingOffset = 160; 
-      const targetW = 1280 + paddingOffset;
-      const targetH = 720 + paddingOffset;
-      
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
-      
-      // 取得完美的等比例縮放值
-      const scale = Math.min(winW / targetW, winH / targetH);
-      wrapper.style.transform = `scale(${scale})`;
-      
-      // 置中對齊，確保畫布周圍留下我們設定的防護邊距
-      const xOffset = (winW - 1280 * scale) / 2;
-      const yOffset = (winH - 720 * scale) / 2;
-      wrapper.style.left = `${Math.max(0, xOffset)}px`;
-      wrapper.style.top = `${Math.max(0, yOffset)}px`;
-  }
+    function applyScale() {
+
+    const wrapper = document.getElementById('scale-wrapper');
+
+    const targetW = wrapper.offsetWidth;
+    const targetH = wrapper.offsetHeight;
+
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    const scale = Math.min(
+        winW / targetW,
+        winH / targetH
+    );
+
+    wrapper.style.transform = `scale(${scale})`;
+    }
   
   window.addEventListener('resize', applyScale);
   // 初始化載入時執行一次
