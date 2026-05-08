@@ -160,7 +160,12 @@ function showSpeed(speed) {
 }
 
 onValue(ref(db, path), (snapshot) => {
-    const speed = snapshot.val();
+    const raw = snapshot.val();
+
+    const speed =
+    typeof raw === "object"
+    ? raw?.speed || 0
+    : raw;
 
     console.log("speed(main):", speed);
 
@@ -173,7 +178,12 @@ onValue(ref(db, path), (snapshot) => {
 
     // ⭐ 沒資料 → fallback
     onValue(ref(db, fallbackPath), (snap2) => {
-        const fbSpeed = snap2.val();
+        const rawFb = snap2.val();
+
+        const fbSpeed =
+            typeof rawFb === "object"
+            ? rawFb?.speed || 0
+            : rawFb;
 
         console.log("speed(fallback):", fbSpeed);
 
