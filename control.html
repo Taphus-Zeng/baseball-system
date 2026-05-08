@@ -2208,7 +2208,7 @@ window.copyOnlySpeedUrl = (gameId) => {
     // ⭐ 正確 base（支援 localhost + github）
     const base = location.origin + getBasePath();
 
-    const url = `${base}/only_speed.html?gameId=${gameId}`;
+    const url = `${base}/speed_only.html?gameId=${gameId}`;
 
     navigator.clipboard.writeText(url).then(() => {
         alert("✅ Only Speed URL 已複製");
