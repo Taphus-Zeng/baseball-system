@@ -700,6 +700,11 @@
         <button class="url-btn" onclick="copyOverlayUrl()">Overlay URL</button>
         <button class="url-btn" onclick="copyLineupUrl()">Lineup URL</button>
         <button class="url-btn url-btn-last" onclick="copyBatterUrl()">Batter URL</button>
+        <!-- ⭐ 新增 -->
+        <button class="url-btn url-btn-last"
+            onclick="copyFinalScoreUrl(getGameId())">
+        Final Score URL
+        </button>
         <button onclick="handleLogout()" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 14px; cursor: pointer;">登出</button>
     </div>
 </div>
@@ -756,8 +761,9 @@
             <button class="preview-btn active" onclick="switchPreview('scoreboard', this)">Scoreboard</button>
             <button class="preview-btn" onclick="switchPreview('lineup', this)">Lineup</button>
             <button class="preview-btn" onclick="switchPreview('batting', this)">Batting</button>
+            <button class="preview-btn" onclick="switchPreview('final', this)">Final</button>
             <label>
-                Stick/懸浮 <input type="checkbox" id="preview-stick-toggle">
+                懸浮 <input type="checkbox" id="preview-stick-toggle">
             </label>
         </div>
     </div>
@@ -807,6 +813,12 @@
                 <input type="text" class="team-name-input" id="home-name" value="主隊" onchange="updateTeam('home')">
                 <button class="btn-score" onclick="updateScore('home', 1)">+1</button>
                 <button class="btn-score" onclick="updateScore('home', -1)">-1</button>
+                <button
+                    class="btn-danger"
+                style="margin-top:10px;"
+                onclick="resetFinalScore()">
+                    Reset Final Score
+                </button>
             </div>
         </div>
         <div class="inning-col">
@@ -1289,6 +1301,7 @@ window.toggleGameSort = () => {
             <button class="btn-outline" onclick="copyOnlySpeedUrl('${id}')">
             📋 Only Speed
             </button>
+            
         </div>
     </div>
 </div>
@@ -1382,6 +1395,10 @@ window.toggleGameSort = () => {
           count: { balls: 0, strikes: 0, outs: 0 },
           bases: { first: false, second: false, third: false },
           pitchCount: { away: 0, home: 0 },
+          inningScores: {
+            away: {},
+            home: {}
+          },
           lineups: { includePitcher: false, away: {}, home: {} }
       };
 
@@ -1908,13 +1925,94 @@ if (current) {
   window.updateLineupPos = (team, bIdx, pos) => update(ref(db, `${basePath}/lineups/${team}/batters/${bIdx}`), { pos: pos });
 
   window.updateTitle = () => update(ref(db, basePath), { title: document.getElementById('title-input').value });
-  window.updateScore = async (team, v) => { const s = await get(child(dbRef, `${basePath}/teams/${team}/score`)); update(ref(db, `${basePath}/teams/${team}`), { score: Math.max(0, (s.exists()?s.val():0)+v) }); };
+  window.updateScore = async (team, v) => {
+
+    // ===== 目前總分 =====
+    const scoreSnap =
+        await get(
+            child(dbRef,
+            `${basePath}/teams/${team}/score`)
+        );
+
+    let totalScore =
+        scoreSnap.exists()
+        ? scoreSnap.val()
+        : 0;
+
+    totalScore += v;
+
+    if (totalScore < 0)
+        totalScore = 0;
+
+    // ===== inning =====
+    const inningSnap =
+        await get(
+            child(dbRef,
+            `${basePath}/gameInfo`)
+        );
+
+    const gameInfo =
+        inningSnap.val();
+
+    const inning =
+        gameInfo?.inning || 1;
+
+    // ===== inning score =====
+    const inningRef =
+        `${basePath}/inningScores/${team}/${inning}`;
+
+    const inningSnap2 =
+        await get(child(dbRef, inningRef));
+
+    let inningScore =
+    inningSnap2.exists()
+    ? Number(inningSnap2.val())
+    : 0;
+
+    inningScore =
+    Number(inningScore) + Number(v);
+
+    if (inningScore < 0)
+        inningScore = 0;
+
+    // ===== 更新 =====
+    let updates = {};
+
+    updates[
+        `${basePath}/teams/${team}/score`
+    ] = totalScore;
+
+    updates[inningRef] = inningScore;
+
+    await update(ref(db), updates);
+};
   window.updateTeam = (team) => update(ref(db, `${basePath}/teams/${team}`), { name: document.getElementById(`${team}-name`).value });
   window.stepInning = async (d) => {
       const i = await get(child(dbRef, `${basePath}/gameInfo/inning`)); const t = await get(child(dbRef, `${basePath}/gameInfo/isTop`));
       let inng = i.exists()?i.val():1, isT = t.exists()?t.val():true;
       if(d==='next'){ if(isT) isT=false; else{ isT=true; inng++; } } else if(d==='prev'){ if(!isT) isT=true; else if(inng>1){ isT=false; inng--; } }
-      update(ref(db, `${basePath}/gameInfo`), { inning: inng, isTop: isT });
+      await update(ref(db, `${basePath}/gameInfo`), {
+    inning: inng,
+    isTop: isT
+});
+
+// ===== 建立空白 inning =====
+const offenseTeam =
+    isT ? 'away' : 'home';
+
+const inningRef =
+    `${basePath}/inningScores/${offenseTeam}/${inng}`;
+
+const inningSnap =
+    await get(child(dbRef, inningRef));
+
+if (!inningSnap.exists()) {
+
+    await set(
+    ref(db, inningRef),
+    0
+    );
+}
   };
   
   window.updateCount = async (type, v) => {
@@ -2087,7 +2185,7 @@ window.copySpeedUrl = (gameId) => {
     }
 
     const url =
-`https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/${gameId}/radar/speed.json`;
+`https://baseball-scoreboard-294d8-default-rtdb.asia-southeast1.firebasedatabase.app/games/${gameId}/radar.json`;
 
     navigator.clipboard.writeText(url)
         .then(() => {
@@ -2119,6 +2217,65 @@ window.copyOnlySpeedUrl = (gameId) => {
         console.error("copy fail:", err);
         alert("❌ 複製失敗");
     });
+};
+window.copyFinalScoreUrl = (gameId) => {
+    if (!gameId) {
+        alert("⚠️ gameId 不存在");
+        return;
+    }
+    const base = location.origin + getBasePath();
+    const url =
+        `${base}/final_score.html?gameId=${gameId}`;
+    navigator.clipboard.writeText(url)
+        .then(() => {
+            alert("✅ Final Score URL 已複製");
+        })
+        .catch(err => {
+            console.error(err);
+            alert("❌ 複製失敗");
+        });
+};
+window.resetFinalScore = async () => {
+    const ok = confirm(
+        "確定要重置 FINAL SCORE？\n\n將會清空：\n- 每局分數\n- 主客隊總分"
+    );
+    if (!ok) return;
+    try {
+        // ===== inningScores 清空 =====
+        await set(
+            ref(db, `${basePath}/inningScores`),
+            {
+                away: {},
+                home: {}
+            }
+        );
+        // ===== teams score 歸零 =====
+        await update(
+            ref(db, `${basePath}/teams`),
+            {
+                away: {
+                    ...localState.teams?.away,
+                    name: localState.teamNames.away,
+                    score: 0
+                },
+                home: {
+                    ...localState.teams?.home,
+                    name: localState.teamNames.home,
+                    score: 0
+                }
+            }
+        );
+        // ===== BSO 歸零 =====
+        await update(ref(db, `${basePath}/count`), {
+            balls: 0,
+            strikes: 0,
+            outs: 0
+        });
+        alert("✅ FINAL SCORE 已重置");
+    } catch (err) {
+        console.error(err);
+        alert("❌ 重置失敗");
+    }
 };
 
 window.addEventListener('load', () => {
@@ -2346,24 +2503,55 @@ function switchPreview(type, el) {
     if (type === 'batting') {
         url = `batting_order.html?gameId=${gameId}&team=home`;
     }
+    if (type === 'final') {
+    url = `final_score.html?gameId=${gameId}`;
+    }
 
     iframe.src = url;
     iframe.onload = () => {
+
     try {
-        const body = iframe.contentWindow.document.body;
 
-        const w = body.scrollWidth;
-        const h = body.scrollHeight;
+        const doc =
+            iframe.contentWindow.document;
 
-        if (w && h) {
+        const body =
+            doc.body;
+
+        const html =
+            doc.documentElement;
+
+        // ⭐ 真正完整高度（包含 absolute overflow）
+        const fullHeight = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+        );
+
+        const fullWidth = Math.max(
+            body.scrollWidth,
+            html.scrollWidth,
+            body.offsetWidth,
+            html.offsetWidth
+        );
+
+        if (fullWidth && fullHeight) {
+
             const wrapperWidth =
-            document.getElementById('preview-wrapper').clientWidth;
+                document
+                    .getElementById('preview-wrapper')
+                    .clientWidth;
+
             iframe.style.height =
-                (wrapperWidth * (h / w)) + "px";
+                (wrapperWidth * (fullHeight / fullWidth))
+                + "px";
         }
 
     } catch (e) {
-        console.warn("iframe resize fail");
+
+        console.warn("iframe resize fail", e);
     }
 };
 
