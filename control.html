@@ -1078,7 +1078,7 @@
   
   // 修改：加入 firebase-auth.js 的 import
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, set, get, child, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, set, get, child, update, onValue, off, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
   // TODO: 貼上您的 Firebase Config
@@ -1096,6 +1096,7 @@
   const db = getDatabase(app);
   const dbRef = ref(db);
   const auth = getAuth(app); // 新增：初始化 Auth
+  let appInitialized = false;
 
     function formatTimestamp(timestamp) {
     if (!timestamp) return "無日期";
@@ -1161,18 +1162,29 @@ window.toggleGameSort = () => {
 
   // Auth Guard 監聽登入狀態
   onAuthStateChanged(auth, (user) => {
-      if (user) {
-          // 登入成功：隱藏登入層，並啟動原本的程式
-          document.getElementById('login-overlay').style.display = 'none';
-          initApp();
-      } else {
-          // 未登入：顯示登入層，隱藏所有其他介面
-          document.getElementById('login-overlay').style.display = 'flex';
-          document.getElementById('home-view').style.display = 'none';
-          document.getElementById('controller-view').style.display = 'none';
-          document.getElementById('top-nav').style.display = 'none';
-      }
-  });
+
+    if (user) {
+
+        // ⭐ 防止重複初始化
+        if (appInitialized) return;
+
+        appInitialized = true;
+
+        document.getElementById('login-overlay').style.display = 'none';
+
+        initApp();
+
+    } else {
+
+        document.getElementById('login-overlay').style.display = 'flex';
+
+        document.getElementById('home-view').style.display = 'none';
+
+        document.getElementById('controller-view').style.display = 'none';
+
+        document.getElementById('top-nav').style.display = 'none';
+    }
+});
 
 
   // ================= 路由與初始化架構 =================
@@ -1186,6 +1198,8 @@ window.toggleGameSort = () => {
   let localState = { isTop: true, rosters: {}, lineups: { includePitcher: false, away: {}, home: {} }, currentBatter: null, teamNames: {away: '客隊', home: '主隊'} };
   let currentEditingTeam = null;
   let currentEditingLibTeamId = null; // 用於首頁編輯資料庫隊伍
+  let unsubscribeController = null;
+  let controllerRef = null;
 
   // 將原本直接執行的邏輯，包裝到 initApp 中，等待登入後才執行
   function initApp() {
@@ -1209,107 +1223,239 @@ window.toggleGameSort = () => {
   
 
   // ================= 視圖 1: 首頁大廳邏輯 =================
-  function initHomeView() {
-      // 監聽隊伍資料庫
-      onValue(ref(db, 'library_teams'), (snapshot) => {
-          const teams = snapshot.val() || {};
-          const listEl = document.getElementById('lib-teams-list');
-          const selAway = document.getElementById('new-game-away');
-          const selHome = document.getElementById('new-game-home');
-          
-          listEl.innerHTML = '';
-          selAway.innerHTML = '<option value="">-- 選擇客隊 --</option>';
-          selHome.innerHTML = '<option value="">-- 選擇主隊 --</option>';
-          
-          const sortedTeams = sortByCreatedAt(teams, teamSortDesc);
-                sortedTeams.forEach(([id, team]) => {
-              // 隊伍列表
-              listEl.innerHTML += `
-                  <div class="list-item">
-                    <div>
-                        <strong>${team.name}</strong>
-                        <div style="font-size:13px; color:#666; margin-top:6px;">
-                            ${formatTimestamp(team.createdAt)}
+    let teamsRef = null;
+    let gamesRef = null;
+
+function initHomeView() {
+
+    // ===== 解除舊監聽 =====
+    if (teamsRef) off(teamsRef);
+    if (gamesRef) off(gamesRef);
+
+    // ===== 隊伍資料庫 =====
+    teamsRef = ref(db, 'library_teams');
+        onValue(
+            teamsRef,
+        (snapshot) => {
+
+            const teams = snapshot.val() || {};
+
+            const listEl =
+                document.getElementById('lib-teams-list');
+
+            const selAway =
+                document.getElementById('new-game-away');
+
+            const selHome =
+                document.getElementById('new-game-home');
+
+            listEl.innerHTML = '';
+
+            selAway.innerHTML =
+                '<option value="">-- 選擇客隊 --</option>';
+
+            selHome.innerHTML =
+                '<option value="">-- 選擇主隊 --</option>';
+
+            const sortedTeams =
+                sortByCreatedAt(
+                    teams,
+                    teamSortDesc
+                );
+
+            sortedTeams.forEach(([id, team]) => {
+
+                listEl.innerHTML += `
+                    <div class="list-item">
+                        <div>
+                            <strong>${team.name}</strong>
+
+                            <div style="
+                                font-size:13px;
+                                color:#666;
+                                margin-top:6px;
+                            ">
+                                ${formatTimestamp(team.createdAt)}
+                            </div>
+                        </div>
+
+                        <div style="
+                            display:flex;
+                            gap:6px;
+                        ">
+                            <button
+                                class="btn-outline"
+                                onclick="
+                                    openLibraryRosterModal(
+                                        '${id}',
+                                        '${team.name}'
+                                    )
+                                ">
+                                編輯名單
+                            </button>
+
+                            <button
+                                class="btn-danger"
+                                onclick="
+                                    deleteTeam(
+                                        '${id}',
+                                        '${team.name}'
+                                    )
+                                ">
+                                刪除
+                            </button>
                         </div>
                     </div>
-                    <div style="display:flex; gap:6px;">
-                    <button class="btn-outline"
-                        onclick="openLibraryRosterModal('${id}', '${team.name}')">
-                        編輯名單
-                    </button>
+                `;
 
-                    <button class="btn-danger"
-                        onclick="deleteTeam('${id}', '${team.name}')">
-                        刪除
-                    </button>
-</div>
-</div>
-              `;
-              // 下拉選單
-              selAway.innerHTML += `<option value="${id}">${team.name}</option>`;
-              selHome.innerHTML += `<option value="${id}">${team.name}</option>`;
-          });
-      });
+                selAway.innerHTML += `
+                    <option value="${id}">
+                        ${team.name}
+                    </option>
+                `;
 
-      // 監聽賽事列表
-      onValue(ref(db, 'games'), (snapshot) => {
-          const games = snapshot.val() || {};
-          const listEl = document.getElementById('games-list');
-          listEl.innerHTML = '';
-          
-          // 若有舊版 scoreboard 也一併顯示為選項
-          listEl.innerHTML += `
-              <div class="list-item" style="border-left: 4px solid #f39c12;">
-                  <div><strong style="color: #f39c12;">舊版預設記分板 (Scoreboard)</strong></div>
-                  <div>
-                      <a href="control.html?legacy=true" class="btn-primary" style="text-decoration: none; margin-right: 5px;">進入控制台</a>
-                      <a href="overlay.html" target="_blank" class="btn-outline">開啟疊加</a>
-                  </div>
-              </div>
-          `;
+                selHome.innerHTML += `
+                    <option value="${id}">
+                        ${team.name}
+                    </option>
+                `;
+            });
+        }
+    );
 
-          const sortedGames = sortByCreatedAt(games, gameSortDesc);
+    // ===== 賽事列表 =====
+    gamesRef = ref(db, 'games');
+        onValue(
+            gamesRef,
+        (snapshot) => {
 
-                sortedGames.forEach(([id, game]) => {
-              listEl.innerHTML += `
-                  <div class="list-item">
-    <div>
-        <strong>${game.title || '未命名賽事'}</strong>
-        <div style="font-size: 14px; color: #666;">
-            ${game.teams?.away?.name || '客隊'} vs ${game.teams?.home?.name || '主隊'}
-        </div>
-        <div style="font-size:13px; color:#888;">
-            ${formatTimestamp(game.createdAt)}
-        </div>
-    </div>
+            const games = snapshot.val() || {};
 
-    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+            const listEl =
+                document.getElementById('games-list');
 
-        <div style="display:flex; gap:6px;">
-            <a href="control.html?gameId=${id}" class="btn-primary">進入控制台</a>
-            <a href="overlay.html?gameId=${id}" target="_blank" class="btn-outline">
-                開啟疊加
-            </a>
-            <button class="btn-danger" onclick="deleteGame('${id}')">刪除</button>
-            </div>
+            listEl.innerHTML = `
+                <div class="list-item"
+                    style="border-left:4px solid #f39c12;">
 
-        <div style="display:flex; gap:6px;">
-            <button class="btn-outline" onclick="copySpeedUrl('${id}')">
-                Speed Json
-            </button>
+                    <div>
+                        <strong style="color:#f39c12;">
+                            舊版預設記分板
+                        </strong>
+                    </div>
 
-            <button class="btn-outline" onclick="copyOnlySpeedUrl('${id}')">
-            📋 Only Speed
-            </button>
-            
-        </div>
-    </div>
-</div>
-              `;
-          });
-      });
-  }
+                    <div>
+                        <a
+                            href="control.html?legacy=true"
+                            class="btn-primary"
+                            style="
+                                text-decoration:none;
+                                margin-right:5px;
+                            ">
+                            進入控制台
+                        </a>
 
+                        <a
+                            href="overlay.html"
+                            target="_blank"
+                            class="btn-outline">
+                            開啟疊加
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const sortedGames =
+                sortByCreatedAt(
+                    games,
+                    gameSortDesc
+                );
+
+            sortedGames.forEach(([id, game]) => {
+
+                listEl.innerHTML += `
+                    <div class="list-item">
+
+                        <div>
+                            <strong>
+                                ${game.title || '未命名賽事'}
+                            </strong>
+
+                            <div style="
+                                font-size:14px;
+                                color:#666;
+                            ">
+                                ${game.teams?.away?.name || '客隊'}
+                                vs
+                                ${game.teams?.home?.name || '主隊'}
+                            </div>
+
+                            <div style="
+                                font-size:13px;
+                                color:#888;
+                            ">
+                                ${formatTimestamp(game.createdAt)}
+                            </div>
+                        </div>
+
+                        <div style="
+                            display:flex;
+                            flex-direction:column;
+                            gap:6px;
+                            align-items:flex-end;
+                        ">
+
+                            <div style="
+                                display:flex;
+                                gap:6px;
+                            ">
+                                <a
+                                    href="control.html?gameId=${id}"
+                                    class="btn-primary">
+                                    進入控制台
+                                </a>
+
+                                <a
+                                    href="overlay.html?gameId=${id}"
+                                    target="_blank"
+                                    class="btn-outline">
+                                    開啟疊加
+                                </a>
+
+                                <button
+                                    class="btn-danger"
+                                    onclick="deleteGame('${id}')">
+                                    刪除
+                                </button>
+                            </div>
+
+                            <div style="
+                                display:flex;
+                                gap:6px;
+                            ">
+                                <button
+                                    class="btn-outline"
+                                    onclick="
+                                        copySpeedUrl('${id}')
+                                    ">
+                                    Speed Json
+                                </button>
+
+                                <button
+                                    class="btn-outline"
+                                    onclick="
+                                        copyOnlySpeedUrl('${id}')
+                                    ">
+                                    📋 Speed Only
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    );
+}
   // 首頁：新增資料庫隊伍
   window.createLibraryTeam = () => {
       const name = document.getElementById('new-lib-team-name').value;
@@ -1326,7 +1472,7 @@ window.toggleGameSort = () => {
   };
 
   // 首頁：編輯資料庫隊伍名單
-  window.openLibraryRosterModal = async (teamId, teamName) => {
+  window.openLibraryRosterModal = async function(teamId, teamName) {
       currentEditingLibTeamId = teamId;
       document.getElementById('lib-roster-modal-title').innerText = `編輯隊伍：${teamName}`;
       const snap = await get(child(dbRef, `library_teams/${teamId}/roster`));
@@ -1344,9 +1490,10 @@ window.toggleGameSort = () => {
           `;
       }
       document.getElementById('lib-roster-modal').style.display = 'flex';
+      
   };
 
-  window.saveLibraryRoster = () => {
+    window.saveLibraryRoster = () => {
       if(!currentEditingLibTeamId) return;
       let newRoster = [];
       for (let i = 0; i < 25; i++) {
@@ -1413,13 +1560,21 @@ window.toggleGameSort = () => {
   const positions = ["", "P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "PH", "PR"];
 
   function initController() {
-      onValue(ref(db, basePath), (snapshot) => {
+
+    // ⭐ 防止 listener 疊加
+    // ⭐ 正確解除 Firebase listener
+        if (controllerRef) {
+            off(controllerRef);
+        }
+
+        controllerRef = ref(db, basePath);
+        onValue(
+            controllerRef,
+            (snapshot) => {
           const data = snapshot.val();
           if(!data) return;
 
         // ⭐⭐⭐ 就插在這裡 ⭐⭐⭐
-            console.log("teams", data.teams);
-            console.log("rosters", data.rosters);
 
           if(data.title !== undefined) {
               document.getElementById('title-input').value = data.title;
@@ -1477,9 +1632,11 @@ window.toggleGameSort = () => {
             if (btn) btn.click();
             }
             window._tabInitialized = true;
-            }   
-      });
-  }
+            }
+
+        }
+    );
+}
 
   function renderPitcherRecords(pitchers, currentPitcherId) {
     const container = document.getElementById("pitcher-record-body");
@@ -2279,6 +2436,8 @@ window.resetFinalScore = async () => {
 };
 
 window.addEventListener('load', () => {
+    if (window._previewResizeInitialized) return;
+        window._previewResizeInitialized = true;
     const wrapper = document.getElementById("preview-wrapper");
     const handle = document.getElementById("resize-handle");
     
@@ -2362,6 +2521,8 @@ function doResize(clientX) {
 
     /* ===== 懸浮控制 ===== */
     window.addEventListener('load', () => {
+        if (window._previewInitialized) return;
+        window._previewInitialized = true;
 
     const wrapper = document.getElementById('preview-wrapper');
     const toggle = document.getElementById('preview-stick-toggle');
@@ -2476,6 +2637,7 @@ function copyBatterUrl() {
 
 /* ===== 滾動縮放（新增這段）===== */
 
+let previewSwitchTimer = null;
 function switchPreview(type, el) {
 
     // ⭐ 1. 清掉所有按鈕 active
@@ -2489,17 +2651,13 @@ function switchPreview(type, el) {
     // ⭐ 3. 原本邏輯（不要動）
     const gameId = new URLSearchParams(window.location.search).get('gameId') || '';
     const iframe = document.getElementById('preview-frame');
-
     let url = '';
-
     if (type === 'scoreboard') {
         url = `overlay.html?gameId=${gameId}`;
     }
-
     if (type === 'lineup') {
         url = `lineup.html?gameId=${gameId}&team=home`;
     }
-
     if (type === 'batting') {
         url = `batting_order.html?gameId=${gameId}&team=home`;
     }
@@ -2507,7 +2665,17 @@ function switchPreview(type, el) {
     url = `final_score.html?gameId=${gameId}`;
     }
 
+    iframe.src = 'about:blank';
+
+    // ⭐ 清除上一個 timer
+    clearTimeout(previewSwitchTimer);
+
+    // ⭐ 建立新的 timer
+    previewSwitchTimer = setTimeout(() => {
     iframe.src = url;
+
+    }, 100);
+
     iframe.onload = () => {
 
     try {
