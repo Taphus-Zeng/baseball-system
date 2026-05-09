@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Score Overlay - 動態局數對齊版</title>
+    <style>
+        body { 
+            margin: 0; padding: 50px; overflow: hidden; background-color: transparent; 
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; font-weight: bold; 
+        }
+
+        #final-container { width: fit-content; display: flex; flex-direction: column; }
+
+        /* ========================================== */
+        /* 第一段動畫：標題進場 (寬度對齊隊伍欄) */
+        /* ========================================== */
+        .final-header {
+            background-color: #101451;
+            color: #FFFF00;
+            font-size: 26px;
+            padding: 10px 0;
+            text-align: center;
+            width: 100%; /* 固定寬度與隊伍欄相同 */
+            box-sizing: border-box;
+            border-bottom: 3px solid white;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            
+            opacity: 0;
+            transform: translateY(-50px);
+            animation: stage1_in 0.6s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes stage1_in {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================== */
+        /* 第二段動畫：表格背景進場 */
+        /* ========================================== */
+        .score-table {
+            border-collapse: separate;
+            border-spacing: 3px;
+            margin-top: 5px;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+        }
+
+        .animate-row {
+            opacity: 0;
+            transform: translateX(-30px);
+            animation: stage2_in 0.7s forwards ease-out;
+        }
+
+        @keyframes stage2_in {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .score-table td {
+            height: 60px;
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            background-color: rgba(0, 0, 0, 0.8);
+            min-width: 50px;
+            padding: 0 10px;
+        }
+
+        .team-label { width: 220px; font-size: 26px; text-align: left !important; padding-left: 20px !important; box-sizing: border-box; }
+        .away-color { background-color: #009EDB !important; }
+        .home-color { background-color: #62338A !important; }
+        
+        .inning-num-header td { 
+            background-color: #101451; 
+            font-size: 18px; 
+            height: 30px; 
+            color: #ccc;
+        }
+        .inning-header-fill {
+
+            background-color:
+             #101451 !important;
+        }
+
+        .total-cell { background-color: rgba(123, 0, 108, 0.9) !important; color: #FFFF00 !important; width: 70px; }
+
+        /* ========================================== */
+        /* 第三段動畫：數值彈出 */
+        /* ========================================== */
+        .score-val {
+            display: inline-block;
+            opacity: 0;
+            transform: scale(0);
+            animation: stage3_pop 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.2);
+        }
+
+        @keyframes stage3_pop {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 延遲設定 */
+        .delay-1 { animation-delay: 1.1s; } .delay-2 { animation-delay: 1.2s; }
+        .delay-3 { animation-delay: 1.3s; } .delay-4 { animation-delay: 1.4s; }
+        .delay-5 { animation-delay: 1.5s; } .delay-6 { animation-delay: 1.6s; }
+        .delay-7 { animation-delay: 1.7s; } .delay-8 { animation-delay: 1.8s; }
+        .delay-9 { animation-delay: 1.9s; }
+        .delay-R { animation-delay: 2.2s; }
+        .delay-H { animation-delay: 2.3s; }
+
+    </style>
+</head>
+<body>
+
+<div id="final-container">
+    <div class="final-header">FINAL SCORE</div>
+    <table class="score-table" id="box-score">
+        </table>
+</div>
+
+<script type="module">
+    import { db } from "./firebase.js";
+    import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const gameId = new URLSearchParams(location.search).get("gameId");
+    const basePath = gameId ? `games/${gameId}` : "scoreboard";
+
+    onValue(ref(db, basePath), (snap) => {
+        const data = snap.val();
+        if (!data) return;
+
+        const currentInning = data.gameInfo?.inning || 1;
+        const isTop = data.gameInfo?.isTop ?? true;
+
+        // 計算安打
+        const getHits = (team) => {
+            const roster = data.rosters?.[team] || [];
+            return Object.values(roster).reduce((sum, p) => sum + (p.H || 0), 0);
+        };
+
+        // 決定要顯示到第幾局 (根據當前局數動態決定)
+        const maxInningToShow = currentInning; 
+
+        // 判定哪些格子要有數字
+        const awayCompleteCount = isTop ? currentInning - 1 : currentInning;
+        const homeCompleteCount = currentInning - 1;
+
+        const table = document.getElementById('box-score');
+        
+        // 生成局數標題列
+        let inningHeaders = "";
+        for (let i = 1; i <= maxInningToShow; i++) {
+            inningHeaders += `<td>${i}</td>`;
+        }
+
+        let html = `
+            <tr class="inning-num-header animate-row" style="animation-delay: 0.4s">
+                <td class="team-label inning-header-fill"></td>
+                ${inningHeaders}
+                <td style="color:#FFFF00">R</td><td>H</td>
+            </tr>
+            <tr class="animate-row" style="animation-delay: 0.6s">
+                <td class="team-label away-color">${data.teams?.away?.name || '客隊'}</td>
+                ${renderDynamicScores(data.inningScores?.away, awayCompleteCount, maxInningToShow)}
+                <td class="total-cell"><span class="score-val delay-R">${data.teams?.away?.score || 0}</span></td>
+                <td class="total-cell" style="background:#444 !important;"><span class="score-val delay-H">${getHits('away')}</span></td>
+            </tr>
+            <tr class="animate-row" style="animation-delay: 0.8s">
+                <td class="team-label home-color">${data.teams?.home?.name || '主隊'}</td>
+                ${renderDynamicScores(data.inningScores?.home, homeCompleteCount, maxInningToShow)}
+                <td class="total-cell"><span class="score-val delay-R">${data.teams?.home?.score || 0}</span></td>
+                <td class="total-cell" style="background:#444 !important;"><span class="score-val delay-H">${getHits('home')}</span></td>
+            </tr>
+        `;
+        table.innerHTML = html;
+    });
+
+    function renderDynamicScores(scores, completeCount, maxInning) {
+        let cells = "";
+        for (let i = 1; i <= maxInning; i++) {
+            const val = (i <= completeCount) ? (scores?.[i] ?? 0) : "";
+            cells += `<td><span class="score-val delay-${i}">${val}</span></td>`;
+        }
+        return cells;
+    }
+</script>
+
+</body>
+</html>
