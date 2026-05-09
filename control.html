@@ -1285,8 +1285,8 @@ function initHomeView() {
                         ">
                             <button
                                 class="btn-outline"
-                                onclick="
-                                    openLibraryRosterModal(
+                                    onclick="
+                                    window.openLibraryRosterModal(
                                         '${id}',
                                         '${team.name}'
                                     )
@@ -1567,7 +1567,14 @@ function initHomeView() {
             off(controllerRef);
         }
 
-        controllerRef = ref(db, basePath);
+        controllerRef = ref(db, `${basePath}/gameInfo`);
+        // ===== Radar 專用 listener =====
+        const radarRef = ref(db, `${basePath}/radar`);
+        onValue(radarRef, (snapshot) => {
+        const radar = snapshot.val() || {};
+        console.log("📡 radar only:", radar);
+        });
+
         onValue(
             controllerRef,
             (snapshot) => {
@@ -2525,6 +2532,16 @@ function doResize(clientX) {
         window._previewInitialized = true;
 
     const wrapper = document.getElementById('preview-wrapper');
+    // ===== iframe resize listener（只初始化一次） =====
+    if (!previewInitialized) {
+    previewInitialized = true;
+    document
+        .getElementById('preview-frame')
+        .addEventListener(
+            'load',
+            handlePreviewResize
+        );
+    }
     const toggle = document.getElementById('preview-stick-toggle');
     
     // ⭐ 加在這裡
@@ -2636,8 +2653,60 @@ function copyBatterUrl() {
 
 
 /* ===== 滾動縮放（新增這段）===== */
+function handlePreviewResize() {
 
+    const iframe =
+        document.getElementById('preview-frame');
+
+    if (!iframe) return;
+
+    try {
+
+        const doc =
+            iframe.contentWindow.document;
+
+        const body = doc.body;
+
+        const html =
+            doc.documentElement;
+
+        const fullHeight = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+        );
+
+        const fullWidth = Math.max(
+            body.scrollWidth,
+            html.scrollWidth,
+            body.offsetWidth,
+            html.offsetWidth
+        );
+
+        if (fullWidth && fullHeight) {
+
+            const wrapperWidth =
+                document
+                    .getElementById('preview-wrapper')
+                    .clientWidth;
+
+            iframe.style.height =
+                (wrapperWidth * (fullHeight / fullWidth))
+                + "px";
+        }
+
+    } catch (e) {
+
+        console.warn(
+            "iframe resize fail",
+            e
+        );
+    }
+}
 let previewSwitchTimer = null;
+var previewInitialized = false;
 function switchPreview(type, el) {
 
     // ⭐ 1. 清掉所有按鈕 active
@@ -2676,7 +2745,7 @@ function switchPreview(type, el) {
 
     }, 100);
 
-    iframe.onload = () => {
+    /*iframe.onload = () => {
 
     try {
 
@@ -2717,11 +2786,11 @@ function switchPreview(type, el) {
                 + "px";
         }
 
-    } catch (e) {
+        } catch (e) {
 
-        console.warn("iframe resize fail", e);
-    }
-};
+            console.warn("iframe resize fail", e);
+        }
+    };*/
 
 
     };
