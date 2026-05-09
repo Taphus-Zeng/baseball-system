@@ -291,7 +291,7 @@
         .btn-result:active { transform: scale(0.95); }
         .btn-out { background-color: #fadbd8; color: #c0392b; } .btn-hit { background-color: #d5f5e3; color: #27ae60; } .btn-obp { background-color: #d6eaf8; color: #2980b9; } .btn-etc { background-color: #fae5d3; color: #d35400; }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 50000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; }
@@ -994,10 +994,10 @@
             <div class="category-col">
                 <div class="category-title">OUT</div>
                 <div class="btn-grid">
-                    <button class="btn-result btn-out" onclick="recordResult('SO')">SO</button>
-                    <button class="btn-result btn-out" onclick="recordResult('N.O')">N.O</button>
-                    <button class="btn-result btn-out" onclick="recordResult('GO')">GO</button>
-                    <button class="btn-result btn-out" onclick="recordResult('FO')">FO</button>
+                    <button class="btn-result btn-out" onclick="recordResult('SO')">SO 三振</button>
+                    <button class="btn-result btn-out" onclick="recordResult('N.O')">N.O 內野</button>
+                    <button class="btn-result btn-out" onclick="recordResult('GO')">GO 滾地</button>
+                    <button class="btn-result btn-out" onclick="recordResult('FO')">FO 飛球</button>
                 </div>
             </div>
             <div class="category-col">
@@ -1012,26 +1012,27 @@
             <div class="category-col">
                 <div class="category-title">OBP</div>
                 <div class="btn-grid">
-                    <button class="btn-result btn-obp" onclick="recordResult('E')">E</button>
-                    <button class="btn-result btn-obp" onclick="recordResult('BB')">BB</button>
-                    <button class="btn-result btn-obp" onclick="recordResult('HBP')">HBP</button>
-                    <button class="btn-result btn-obp" onclick="recordResult('IBB')">IBB</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('E')">E 失誤</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('BB')">BB 四死</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('HBP')">HBP 觸身</button>
+                    <button class="btn-result btn-obp" onclick="recordResult('IBB')">IBB 敬遠</button>
                 </div>
             </div>
             <div class="category-col">
                 <div class="category-title">ETC</div>
                 <div class="btn-grid">
-                    <button class="btn-result btn-etc" onclick="recordResult('SB')">SB</button>
-                    <button class="btn-result btn-etc" onclick="recordResult('GDP')">GDP</button>
-                    <button class="btn-result btn-etc" onclick="recordResult('SH')">SH</button>
-                    <button class="btn-result btn-etc" onclick="recordResult('FC')">FC</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('SB')">SB 盜壘</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('GDP')">GDP 雙殺</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('SH')">SH 犧牲</button>
+                    <button class="btn-result btn-etc" onclick="recordResult('FC')">FC 野選</button>
                 </div>
             </div>
         </div>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">* 點擊除盜壘(SB)外的結果，系統將會自動結算安打/打數，並自動清空 BSO 球數。</div>
     </div>
-
     
+    </div> <!-- ⭐ 新增：關閉 controller-view -->
+
 
 <div class="modal-overlay" id="roster-modal">
     <div class="modal-content">
@@ -1198,13 +1199,14 @@ window.toggleGameSort = () => {
   let localState = { isTop: true, rosters: {}, lineups: { includePitcher: false, away: {}, home: {} }, currentBatter: null, teamNames: {away: '客隊', home: '主隊'} };
   let currentEditingTeam = null;
   let currentEditingLibTeamId = null; // 用於首頁編輯資料庫隊伍
-  let unsubscribeController = null;
   let controllerRef = null;
+  let radarRef = null;
+  let controllerListenerAttached = false;
 
   // 將原本直接執行的邏輯，包裝到 initApp 中，等待登入後才執行
   function initApp() {
       // 畫面切換控制
-      if (gameId || urlParams.has('legacy')) {
+      if (gameId) {
           // 顯示轉播控制台
           document.getElementById('home-view').style.display = 'none';
           document.getElementById('controller-view').style.display = 'block';
@@ -1265,6 +1267,8 @@ function initHomeView() {
 
             sortedTeams.forEach(([id, team]) => {
 
+                const btnId = `edit-btn-${id}`;
+
                 listEl.innerHTML += `
                     <div class="list-item">
                         <div>
@@ -1279,34 +1283,24 @@ function initHomeView() {
                             </div>
                         </div>
 
-                        <div style="
-                            display:flex;
-                            gap:6px;
-                        ">
-                            <button
-                                class="btn-outline"
-                                    onclick="
-                                    window.openLibraryRosterModal(
-                                        '${id}',
-                                        '${team.name}'
-                                    )
-                                ">
-                                編輯名單
-                            </button>
+            <div style="
+                display:flex;
+                gap:6px;
+            ">
+                <button
+                    class="btn-outline"
+                    onclick="testOpenRoster('${id}')">
+                    編輯名單
+                </button>
 
-                            <button
-                                class="btn-danger"
-                                onclick="
-                                    deleteTeam(
-                                        '${id}',
-                                        '${team.name}'
-                                    )
-                                ">
-                                刪除
-                            </button>
-                        </div>
-                    </div>
-                `;
+                <button
+                    class="btn-danger"
+                    onclick="deleteTeam('${id}')">
+                    刪除
+                </button>
+            </div>
+        </div>
+    `;
 
                 selAway.innerHTML += `
                     <option value="${id}">
@@ -1333,37 +1327,7 @@ function initHomeView() {
 
             const listEl =
                 document.getElementById('games-list');
-
-            listEl.innerHTML = `
-                <div class="list-item"
-                    style="border-left:4px solid #f39c12;">
-
-                    <div>
-                        <strong style="color:#f39c12;">
-                            舊版預設記分板
-                        </strong>
-                    </div>
-
-                    <div>
-                        <a
-                            href="control.html?legacy=true"
-                            class="btn-primary"
-                            style="
-                                text-decoration:none;
-                                margin-right:5px;
-                            ">
-                            進入控制台
-                        </a>
-
-                        <a
-                            href="overlay.html"
-                            target="_blank"
-                            class="btn-outline">
-                            開啟疊加
-                        </a>
-                    </div>
-                </div>
-            `;
+            listEl.innerHTML = '';
 
             const sortedGames =
                 sortByCreatedAt(
@@ -1461,8 +1425,8 @@ function initHomeView() {
       const name = document.getElementById('new-lib-team-name').value;
       if (!name) return alert("請輸入隊伍名稱");
       const newTeamRef = push(ref(db, 'library_teams'));
-      // 初始化 25 個空位
-      let emptyRoster = Array(25).fill({ num: '', name: '', H: 0, AB: 0 });
+      // ⭐ 修正：改用 Array.from，確保 25 個球員的資料各自獨立，不會互相連動
+        let emptyRoster = Array.from({ length: 25 }, () => ({ num: '', name: '', H: 0, AB: 0 }));
       set(newTeamRef, {
     name: name,
     roster: emptyRoster,
@@ -1471,13 +1435,28 @@ function initHomeView() {
       document.getElementById('new-lib-team-name').value = '';
   };
 
+  window.testOpenRoster = function(teamId) {
+
+    console.log("🔥 按鈕有觸發", teamId);
+
+    openLibraryRosterModal(teamId);
+};
+
   // 首頁：編輯資料庫隊伍名單
-  window.openLibraryRosterModal = async function(teamId, teamName) {
+  window.openLibraryRosterModal = async function(teamId) {
+        console.log("✅ openLibraryRosterModal 開始", teamId);
       currentEditingLibTeamId = teamId;
-      document.getElementById('lib-roster-modal-title').innerText = `編輯隊伍：${teamName}`;
-      const snap = await get(child(dbRef, `library_teams/${teamId}/roster`));
+      console.log("STEP 1");
+      const teamSnap = await get(
+            child(dbRef, `library_teams/${teamId}`)
+        );
+        const teamData = teamSnap.val() || {};
+        document.getElementById('lib-roster-modal-title').innerText =
+            `編輯隊伍：${teamData.name || ''}`;
+      console.log("STEP 2");
+            const snap = await get(child(dbRef, `library_teams/${teamId}/roster`));
       const roster = snap.exists() ? snap.val() : [];
-      
+      console.log("STEP 3");
       const container = document.getElementById('lib-roster-inputs-container');
       container.innerHTML = '';
       for (let i = 0; i < 25; i++) {
@@ -1489,7 +1468,16 @@ function initHomeView() {
               </div>
           `;
       }
-      document.getElementById('lib-roster-modal').style.display = 'flex';
+      console.log("STEP 4");
+      const modal =
+            document.getElementById('lib-roster-modal');
+
+        if (!modal) {
+            console.error('❌ 找不到 lib-roster-modal');
+            return;
+        }
+
+modal.style.display = 'flex';
       
   };
 
@@ -1563,21 +1551,17 @@ function initHomeView() {
 
     // ⭐ 防止 listener 疊加
     // ⭐ 正確解除 Firebase listener
-        if (controllerRef) {
-            off(controllerRef);
+        // ⭐ 防止重複綁定
+        if (controllerListenerAttached) {
+            return;
         }
+        controllerListenerAttached = true;
+        controllerRef = ref(db, basePath);
 
-        controllerRef = ref(db, `${basePath}/gameInfo`);
-        // ===== Radar 專用 listener =====
-        const radarRef = ref(db, `${basePath}/radar`);
-        onValue(radarRef, (snapshot) => {
-        const radar = snapshot.val() || {};
-        console.log("📡 radar only:", radar);
-        });
-
-        onValue(
-            controllerRef,
-            (snapshot) => {
+            onValue(
+                controllerRef,
+                (snapshot) => {
+                console.count("controller listener");
           const data = snapshot.val();
           if(!data) return;
 
@@ -1640,9 +1624,8 @@ function initHomeView() {
             }
             window._tabInitialized = true;
             }
-
         }
-    );
+);
 }
 
   function renderPitcherRecords(pitchers, currentPitcherId) {
@@ -1769,7 +1752,7 @@ const EVENT_RULES = {
     'N.O': { out: 1 },
     GO: { out: 1 },
     FO: { out: 1 },
-    GDP: { out: 1 },
+    GDP: { out: 2 },
     FC: { out: 1 },
 
     // 上壘
@@ -2442,7 +2425,9 @@ window.resetFinalScore = async () => {
     }
 };
 
-window.addEventListener('load', () => {
+let previewSwitchTimer = null;
+let previewInitialized = false;
+window.initPreviewResize = function() {
     if (window._previewResizeInitialized) return;
         window._previewResizeInitialized = true;
     const wrapper = document.getElementById("preview-wrapper");
@@ -2506,7 +2491,7 @@ function doResize(clientX) {
     }, { passive: true });
 
     document.addEventListener("touchend", stopResize);
-});
+};
 
 
 
@@ -2527,14 +2512,14 @@ function doResize(clientX) {
 }
 
     /* ===== 懸浮控制 ===== */
-    window.addEventListener('load', () => {
+    function initPreviewUI() {
         if (window._previewInitialized) return;
         window._previewInitialized = true;
 
     const wrapper = document.getElementById('preview-wrapper');
     // ===== iframe resize listener（只初始化一次） =====
-    if (!previewInitialized) {
-    previewInitialized = true;
+    if (!window.previewInitialized) {
+    window.previewInitialized = true;
     document
         .getElementById('preview-frame')
         .addEventListener(
@@ -2566,17 +2551,30 @@ function doResize(clientX) {
 });
 
     // ===== 初始化 overlay 按鈕 =====
-    const firstBtn = document.querySelector('.preview-btn');
-    switchPreview('scoreboard', firstBtn);
+    const firstBtn =
+    document.querySelector('.preview-btn');
+
+    const gameId =
+    new URLSearchParams(window.location.search)
+    .get('gameId');
+
+    if (gameId) {
+        switchPreview('scoreboard', firstBtn);
+    }
 
     // ===== 初始化尺寸 =====
     const saved = localStorage.getItem("previewWidth");
     if (saved) {
-        wrapper.style.width = saved + "px";
-    }
+    wrapper.style.width = saved + "px";
+}
 
-});
+}
+window.onload = () => {
 
+    initPreviewResize();
+
+    initPreviewUI();
+};
 // ===== Radar Offset =====
 let radarOffset = 0;
 
@@ -2705,8 +2703,7 @@ function handlePreviewResize() {
         );
     }
 }
-let previewSwitchTimer = null;
-var previewInitialized = false;
+
 function switchPreview(type, el) {
 
     // ⭐ 1. 清掉所有按鈕 active
@@ -2718,7 +2715,14 @@ function switchPreview(type, el) {
     if (el) el.classList.add('active');
 
     // ⭐ 3. 原本邏輯（不要動）
-    const gameId = new URLSearchParams(window.location.search).get('gameId') || '';
+    const gameId =
+    new URLSearchParams(window.location.search)
+    .get('gameId');
+
+    if (!gameId) {
+        console.warn("⚠️ missing gameId");
+        return;
+    }
     const iframe = document.getElementById('preview-frame');
     let url = '';
     if (type === 'scoreboard') {
@@ -2737,10 +2741,10 @@ function switchPreview(type, el) {
     iframe.src = 'about:blank';
 
     // ⭐ 清除上一個 timer
-    clearTimeout(previewSwitchTimer);
+    clearTimeout(window.previewSwitchTimer);
 
     // ⭐ 建立新的 timer
-    previewSwitchTimer = setTimeout(() => {
+    window.previewSwitchTimer = setTimeout(() => {
     iframe.src = url;
 
     }, 100);
