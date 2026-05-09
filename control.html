@@ -872,7 +872,12 @@
         <!-- 客隊 -->
         <div class="pitch-row">
             <div class="pitch-title">
-                客隊投手 (<span id="ctrl-away-pc" class="pitch-count-number">0</span>)
+                客隊投手：
+                    <span id="ctrl-away-pitcher-name">--</span>
+                    (
+                    <span id="ctrl-away-pc"
+                    class="pitch-count-number">0</span>
+                    )
             </div>
 
             <div class="pitch-actions">
@@ -888,7 +893,12 @@
         <!-- 主隊 -->
         <div class="pitch-row">
             <div class="pitch-title">
-                主隊投手 (<span id="ctrl-home-pc" class="pitch-count-number">0</span>)
+                主隊投手：
+                    <span id="ctrl-home-pitcher-name">--</span>
+                    (
+                    <span id="ctrl-home-pc"
+                    class="pitch-count-number">0</span>
+                )
             </div>
 
             <div class="pitch-actions">
@@ -1030,7 +1040,7 @@
         </div>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">* 點擊除盜壘(SB)外的結果，系統將會自動結算安打/打數，並自動清空 BSO 球數。</div>
     </div>
-    
+
     </div> <!-- ⭐ 新增：關閉 controller-view -->
 
 
@@ -1601,7 +1611,21 @@ modal.style.display = 'flex';
           if(data.pitchCount) {
               document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0;
               document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0;
-          }
+              // ===== 同步目前投手名字 =====
+                document.getElementById(
+                    'ctrl-away-pitcher-name'
+                    ).innerText =
+                document.getElementById(
+                    'away-p-name'
+                    )?.innerText || '--';
+
+                document.getElementById(
+                'ctrl-home-pitcher-name'
+                    ).innerText =
+                document.getElementById(
+                    'home-p-name'
+                    )?.innerText || '--';
+            }
           renderPitcherRecords(data.pitchers || {}, data.currentPitcherId);
 
           localState.rosters = data.rosters || {};
