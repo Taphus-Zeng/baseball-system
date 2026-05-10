@@ -129,6 +129,54 @@
         .btn-score:hover { background-color: #e9ecef; }
         .btn-score:active { background-color: #dee2e6; transform: scale(0.98); }
 
+        /* ===== Game Action ===== */
+
+.game-action-col {
+
+    width: 170px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+}
+
+.game-action-buttons {
+
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.game-btn-end,
+.game-btn-resume,
+.game-btn-reset {
+
+    width: 100%;
+
+    height: 48px;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    border-radius: 8px;
+}
+
+.game-btn-end {
+    background: #8e44ad;
+}
+
+.game-btn-resume {
+    background: #555;
+}
+
+.game-btn-reset {
+    white-space: nowrap;
+}
+
         /* --- 2. 局數區塊 --- */
         .inning-col { display: flex; flex-direction: column; width: 140px; }
         .inning-display { 
@@ -364,7 +412,7 @@
 }
 .preview-body {
     width: 100%;
-    background: transparent;
+    overflow: hidden;
 }
 
 .preview-controls button {
@@ -422,24 +470,28 @@
 /* iframe */
 #preview-frame {
     width: 100%;
-    aspect-ratio: 16 / 9;
     border: none;
     display: block;
 }
 
 /* ⭐ 右側 resize */
-#resize-handle {
+#resize-corner {
 
     position: absolute;
-    top: 0;
+
     right: 0;
+    bottom: 0;
 
     width: 28px;
-    height: 100%;
+    height: 28px;
 
-    cursor: ew-resize;
+    cursor: nwse-resize;
 
-    z-index: 50;
+    z-index: 1000;
+
+    background: rgba(255,255,255,0.15);
+
+    border-top-left-radius: 8px;
 }
 
 /* ===== Pitch Header ===== */
@@ -758,22 +810,74 @@
     <div class="preview-header">
         Preview
         <div class="preview-controls">
-            <button class="preview-btn active" onclick="switchPreview('scoreboard', this)">Scoreboard</button>
-            <button class="preview-btn" onclick="switchPreview('lineup', this)">Lineup</button>
-            <button class="preview-btn" onclick="switchPreview('batting', this)">Batting</button>
-            <button class="preview-btn" onclick="switchPreview('final', this)">Final</button>
-            <label>
-                懸浮 <input type="checkbox" id="preview-stick-toggle">
-            </label>
-        </div>
+
+    <!-- Overlay Type -->
+    <select id="preview-type-selector">
+
+        <option value="overlay">
+            LIVE
+        </option>
+
+        <option value="lineup">
+            LINEUP
+        </option>
+
+        <option value="batting">
+            BATTING
+        </option>
+
+        <option value="final">
+            FINAL
+        </option>
+
+    </select>
+
+    <!-- Theme -->
+    <select id="theme-selector">
+
+        <option value="default">
+            Default
+        </option>
+
+        <option value="eva">
+            EVA
+        </option>
+
+        <option value="spk">
+            SPK
+        </option>
+
+        <option value="mlb">
+            MLB
+        </option>
+
+        <option value="npb">
+            NPB
+        </option>
+
+    </select>
+
+    <label>
+        懸浮
+        <input
+            type="checkbox"
+            id="preview-stick-toggle">
+    </label>
+
+</div>
     </div>
 
     <div class="preview-body">
-        <iframe id="preview-frame"></iframe>
+        <iframe
+            id="preview-frame"
+            src=""
+        ></iframe>
     </div>
 
     <!-- ⭐ 右側 resize 區 -->
     <div id="resize-handle"></div>
+
+    <div id="resize-corner"></div>
     </div>
 
     <div class="top-toolbar">
@@ -813,15 +917,52 @@
                 <input type="text" class="team-name-input" id="home-name" value="主隊" onchange="updateTeam('home')">
                 <button class="btn-score" onclick="updateScore('home', 1)">+1</button>
                 <button class="btn-score" onclick="updateScore('home', -1)">-1</button>
-                <button
-                    class="btn-danger"
-                style="margin-top:10px;"
-                onclick="resetFinalScore()">
-                    Reset Final Score
-                </button>
+                <div
+    <div
+    style="
+        display:flex;
+        gap:10px;
+        margin-top:10px;
+        width:100%;
+        "
+    >
+
+</div>
             </div>
-        </div>
-        <div class="inning-col">
+</div>
+
+<!-- ===== Game Action ===== -->
+<div class="game-action-col">
+
+    <div class="section-title">
+        Game
+    </div>
+
+    <div class="game-action-buttons">
+
+        <button
+            class="btn-primary game-btn-end"
+            onclick="setGameEnd(true)">
+            Game End
+        </button>
+
+        <button
+            class="btn-primary game-btn-resume"
+            onclick="setGameEnd(false)">
+            Resume
+        </button>
+
+        <button
+            class="btn-danger game-btn-reset"
+            onclick="resetFinalScore()">
+            Reset Final Score
+        </button>
+
+    </div>
+
+</div>
+
+<div class="inning-col">
             <div class="section-title">Inning</div>
             <div class="inning-display"><span id="ctrl-inning">1</span><span id="ctrl-half" class="arrow-up">▲</span></div>
             <div class="inning-nav">
@@ -859,8 +1000,8 @@
     <h3>Pitch Count (投手用球數手動微調)</h3>
 
     <div class="tab-header">
-        <button class="tab-btn active" onclick="switchTab('pitching', this)">Pitching</button>
-        <button class="tab-btn" onclick="switchTab('pitchingRecord', this)">Pitching Record</button>
+        <button class="tab-btn active" onclick="window.switchTab('pitching', this)">Pitching</button>
+        <button class="tab-btn" onclick="window.switchTab('pitchingRecord', this)">Pitching Record</button>
     </div>
     </div>
 
@@ -1536,7 +1677,11 @@ modal.style.display = 'flex';
               away: awayData.roster || Array(25).fill({num:'', name:'', H:0, AB:0}),
               home: homeData.roster || Array(25).fill({num:'', name:'', H:0, AB:0})
           },
-          gameInfo: { inning: 1, isTop: true },
+          gameInfo: {
+                    inning: 1,
+                    isTop: true,
+                    isGameEnd: false
+                    },
           count: { balls: 0, strikes: 0, outs: 0 },
           bases: { first: false, second: false, third: false },
           pitchCount: { away: 0, home: 0 },
@@ -2062,7 +2207,7 @@ if (current) {
         closeModal('pitcher-modal');
 
         // ⭐ 這行才是關鍵
-        autoSwitchTab('pitching', true);
+        window.autoSwitchTab('pitching');
         });
   };
 
@@ -2406,6 +2551,21 @@ window.copyFinalScoreUrl = (gameId) => {
             alert("❌ 複製失敗");
         });
 };
+window.setGameEnd = async (value) => {
+
+    await update(
+        ref(db, `${basePath}/gameInfo`),
+        {
+            isGameEnd: value
+        }
+    );
+
+    alert(
+        value
+        ? "✅ 比賽已結束"
+        : "▶️ 比賽恢復進行"
+    );
+};
 window.resetFinalScore = async () => {
     const ok = confirm(
         "確定要重置 FINAL SCORE？\n\n將會清空：\n- 每局分數\n- 主客隊總分"
@@ -2455,7 +2615,10 @@ window.initPreviewResize = function() {
     if (window._previewResizeInitialized) return;
         window._previewResizeInitialized = true;
     const wrapper = document.getElementById("preview-wrapper");
-    const handle = document.getElementById("resize-handle");
+    const handle =
+    document.getElementById(
+        "resize-corner"
+    );
     
     let resizing = false;
 
@@ -2470,32 +2633,69 @@ function stopResize() {
 }
 
 // ===== 真正 resize =====
-function doResize(clientX) {
+function doResize(clientX, clientY) {
 
     if (!resizing) return;
 
-    const rect = wrapper.getBoundingClientRect();
+    const rect =
+        wrapper.getBoundingClientRect();
 
-    let newWidth = clientX - rect.left;
+    // ===== width =====
+    let newWidth =
+        clientX - rect.left;
 
-    // 最小寬度
-    newWidth = Math.max(320, newWidth);
+    newWidth =
+        Math.max(320, newWidth);
 
-    // 最大寬度
-    const maxWidth = window.innerWidth - rect.left - 20;
+    const maxWidth =
+        window.innerWidth
+        - rect.left
+        - 20;
 
-    newWidth = Math.min(maxWidth, newWidth);
+    newWidth =
+        Math.min(maxWidth, newWidth);
 
-    wrapper.style.width = newWidth + "px";
+    wrapper.style.width =
+        newWidth + "px";
 
-    localStorage.setItem("previewWidth", newWidth);
+    // ===== height =====
+    let newHeight =
+        clientY - rect.top;
+
+    newHeight =
+        Math.max(180, newHeight);
+
+    wrapper.style.height =
+        newHeight + "px";
+
+    // ===== iframe =====
+    const iframe =
+        document.getElementById(
+            'preview-frame'
+        );
+
+    iframe.style.height =
+        (newHeight - 40) + 'px';
+
+    localStorage.setItem(
+        "previewWidth",
+        newWidth
+    );
+
+    localStorage.setItem(
+        "previewHeight",
+        newHeight
+    );
 }
 
     // ===== PC =====
     handle.addEventListener("mousedown", startResize);
 
     document.addEventListener("mousemove", (e) => {
-    doResize(e.clientX);
+    doResize(
+        e.clientX,
+        e.clientY
+    );
     });
 
     document.addEventListener("mouseup", stopResize);
@@ -2510,7 +2710,10 @@ function doResize(clientX) {
 
     if (!e.touches[0]) return;
 
-    doResize(e.touches[0].clientX);
+    doResize(
+        e.touches[0].clientX,
+        e.touches[0].clientY
+    );
 
     }, { passive: true });
 
@@ -2574,31 +2777,112 @@ function doResize(clientX) {
 
 });
 
-    // ===== 初始化 overlay 按鈕 =====
-    const firstBtn =
-    document.querySelector('.preview-btn');
-
-    const gameId =
-    new URLSearchParams(window.location.search)
-    .get('gameId');
-
-    if (gameId) {
-        switchPreview('scoreboard', firstBtn);
-    }
-
     // ===== 初始化尺寸 =====
     const saved = localStorage.getItem("previewWidth");
-    if (saved) {
-    wrapper.style.width = saved + "px";
-}
+    const savedHeight =
+    localStorage.getItem(
+        "previewHeight"
+    );
+
+        if (savedHeight) {
+
+            wrapper.style.height =
+            savedHeight + "px";
+
+            document.getElementById(
+            'preview-frame'
+        ).style.height =
+        (savedHeight - 40) + 'px';
+        }
+        if (saved) {
+            wrapper.style.width = saved + "px";
+        }
 
 }
-window.onload = () => {
+window.addEventListener('DOMContentLoaded', () => {
 
     initPreviewResize();
 
     initPreviewUI();
-};
+
+    const gameId =
+        new URLSearchParams(window.location.search)
+        .get('gameId');
+
+    if (gameId) {
+
+    const frame =
+        document.getElementById(
+            'preview-frame'
+        );
+
+    const themeSelector =
+        document.getElementById(
+            'theme-selector'
+        );
+
+    const typeSelector =
+        document.getElementById(
+            'preview-type-selector'
+        );
+
+    function updatePreviewFrame() {
+
+        const theme =
+            themeSelector.value;
+
+        const type =
+            typeSelector.value;
+
+        let url = '';
+
+        switch(type) {
+
+            case 'overlay':
+
+                url =
+                    `overlay.html?gameId=${gameId}&theme=${theme}`;
+                break;
+
+            case 'lineup':
+
+                url =
+                    `lineup.html?gameId=${gameId}&team=home&theme=${theme}`;
+                break;
+
+            case 'batting':
+
+                url =
+                    `batting_order.html?gameId=${gameId}&team=home&theme=${theme}`;
+                break;
+
+            case 'final':
+
+                url =
+                    `final_score.html?gameId=${gameId}&theme=${theme}`;
+                break;
+        }
+
+        frame.src = url;
+    }
+
+    // 初始載入
+    updatePreviewFrame();
+
+    // Theme 切換
+    themeSelector.addEventListener(
+        'change',
+        updatePreviewFrame
+    );
+
+    // Overlay Type 切換
+    typeSelector.addEventListener(
+        'change',
+        updatePreviewFrame
+    );
+}
+
+});
 // ===== Radar Offset =====
 let radarOffset = 0;
 
@@ -2635,50 +2919,58 @@ window.switchTab = function(tabName, el) {
 window.autoSwitchTab = function(tabName) {
     const btn = document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
     if (btn) {
-        switchTab(tabName, btn);
+        window.switchTab(tabName, btn);
     }
 };
 
 /* ===== Header URL 按鈕 ===== */
-function getGameId() {
+window.getGameId = function() {
     return new URLSearchParams(window.location.search).get('gameId');
-}
+};
 
-function copyToClipboard(text) {
+window.copyToClipboard = function(text) {
     navigator.clipboard.writeText(text);
     alert("已複製 URL");
-}
+};
 
 // ⭐ Overlay
-function copyOverlayUrl() {
-    const gameId = getGameId();
-    const base = location.origin + getBasePath();
-    const url = `${base}/overlay.html?gameId=${gameId}`;
-    copyToClipboard(url);
-}
+window.copyOverlayUrl = function() {
+    const gameId = window.getGameId();
+    const base =
+        location.origin + getBasePath();
+    const url =
+        `${base}/overlay.html?gameId=${gameId}`;
+    window.copyToClipboard(url);
+};
 
 // ⭐ Lineup
-function copyLineupUrl() {
-    const gameId = getGameId();
-    const base = location.origin + getBasePath();
-    const url = `${base}/lineup.html?gameId=${gameId}&team=home`;
-    copyToClipboard(url);
-}
+window.copyLineupUrl = function() {
+    const gameId = window.getGameId();
+    const base =
+        location.origin + getBasePath();
+    const url =
+        `${base}/lineup.html?gameId=${gameId}&team=home`;
+    window.copyToClipboard(url);
+};
 
 // ⭐ Batter
-function copyBatterUrl() {
-    const gameId = getGameId();
-    const base = location.origin + getBasePath();
-    const url = `${base}/batting_order.html?gameId=${gameId}&team=home`;
-    copyToClipboard(url);
-}
+window.copyBatterUrl = function() {
+    const gameId = window.getGameId();
+    const base =
+        location.origin + getBasePath();
+    const url =
+        `${base}/batting_order.html?gameId=${gameId}&team=home`;
+    window.copyToClipboard(url);
+};
 
 
 /* ===== 滾動縮放（新增這段）===== */
 function handlePreviewResize() {
 
     const iframe =
-        document.getElementById('preview-frame');
+        document.getElementById(
+            'preview-frame'
+        );
 
     if (!iframe) return;
 
@@ -2687,141 +2979,79 @@ function handlePreviewResize() {
         const doc =
             iframe.contentWindow.document;
 
-        const body = doc.body;
+        const root =
+            doc.querySelector(
+                '.preview-scale-root'
+            );
 
-        const html =
-            doc.documentElement;
+        if (!root) return;
 
-        const fullHeight = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
-        );
+        // ===== 先清掉 transform =====
+        root.style.transform = 'none';
 
-        const fullWidth = Math.max(
-            body.scrollWidth,
-            html.scrollWidth,
-            body.offsetWidth,
-            html.offsetWidth
-        );
+        // ===== 真實原始尺寸 =====
+        const rect =
+            root.getBoundingClientRect();
 
-        if (fullWidth && fullHeight) {
+        const contentWidth =
+            root.scrollWidth;
 
-            const wrapperWidth =
-                document
-                    .getElementById('preview-wrapper')
-                    .clientWidth;
+        const contentHeight =
+            root.scrollHeight;
 
-            iframe.style.height =
-                (wrapperWidth * (fullHeight / fullWidth))
-                + "px";
-        }
+        if (
+            contentWidth <= 0 ||
+            contentHeight <= 0
+        ) return;
+
+        // ===== preview 可用寬 =====
+        const wrapperWidth =
+            document
+                .getElementById(
+                    'preview-wrapper'
+                )
+                .clientWidth;
+
+        // ===== scale =====
+        const scale =
+            Math.min(
+                1,
+                wrapperWidth / contentWidth
+            );
+
+        // ===== 套用縮放 =====
+        root.style.transform =
+            `scale(${scale})`;
+        root.style.position = 'relative';
+
+        root.style.transformOrigin =
+            'top left';
+
+        // ⭐ 關鍵
+        root.style.width =
+            contentWidth + 'px';
+        root.style.height =
+            contentHeight + 'px';
+
+        // ⭐ iframe 高度
+        iframe.style.height =
+            (contentHeight * scale)
+            + 'px';
 
     } catch (e) {
 
         console.warn(
-            "iframe resize fail",
+            'iframe resize fail',
             e
         );
     }
 }
 
-function switchPreview(type, el) {
-
-    // ⭐ 1. 清掉所有按鈕 active
-    document.querySelectorAll('.preview-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // ⭐ 2. 設定目前按鈕
-    if (el) el.classList.add('active');
-
-    // ⭐ 3. 原本邏輯（不要動）
-    const gameId =
-    new URLSearchParams(window.location.search)
-    .get('gameId');
-
-    if (!gameId) {
-        console.warn("⚠️ missing gameId");
-        return;
-    }
-    const iframe = document.getElementById('preview-frame');
-    let url = '';
-    if (type === 'scoreboard') {
-        url = `overlay.html?gameId=${gameId}`;
-    }
-    if (type === 'lineup') {
-        url = `lineup.html?gameId=${gameId}&team=home`;
-    }
-    if (type === 'batting') {
-        url = `batting_order.html?gameId=${gameId}&team=home`;
-    }
-    if (type === 'final') {
-    url = `final_score.html?gameId=${gameId}`;
-    }
-
-    iframe.src = 'about:blank';
-
-    // ⭐ 清除上一個 timer
-    clearTimeout(window.previewSwitchTimer);
-
-    // ⭐ 建立新的 timer
-    window.previewSwitchTimer = setTimeout(() => {
-    iframe.src = url;
-
-    }, 100);
-
-    /*iframe.onload = () => {
-
-    try {
-
-        const doc =
-            iframe.contentWindow.document;
-
-        const body =
-            doc.body;
-
-        const html =
-            doc.documentElement;
-
-        // ⭐ 真正完整高度（包含 absolute overflow）
-        const fullHeight = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
-        );
-
-        const fullWidth = Math.max(
-            body.scrollWidth,
-            html.scrollWidth,
-            body.offsetWidth,
-            html.offsetWidth
-        );
-
-        if (fullWidth && fullHeight) {
-
-            const wrapperWidth =
-                document
-                    .getElementById('preview-wrapper')
-                    .clientWidth;
-
-            iframe.style.height =
-                (wrapperWidth * (fullHeight / fullWidth))
-                + "px";
-        }
-
-        } catch (e) {
-
-            console.warn("iframe resize fail", e);
-        }
-    };*/
-
-
+function switchPreview() {
+    return;
     };
+
+    
 // ⭐⭐⭐ 放在全域（不能放在 function 裡）
 document.getElementById("offsetDisplay").value = radarOffset;
 </script>
