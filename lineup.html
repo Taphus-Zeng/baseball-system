@@ -259,11 +259,11 @@
   applyScale();
   // 避免字型或圖片晚讀取造成尺寸偏移，定期補償
   setInterval(applyScale, 500);
-  // ⭐ 10秒後自動淡出
+  // ⭐ 15秒後自動淡出
     setTimeout(() => {
     document.body.classList.add('overlay-hide');
 
-}, 10000);
+}, 15000);
 
 </script>
 </body>
