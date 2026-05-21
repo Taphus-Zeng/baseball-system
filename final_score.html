@@ -44,25 +44,105 @@
         /* 第一段動畫：標題進場 (寬度對齊隊伍欄) */
         /* ========================================== */
         .final-header {
-            background-color: #101451;
-            color: #FFFF00;
-            font-size: 26px;
-            padding: 10px 0;
+
+            position: relative;
+            background:
+                linear-gradient(
+                    135deg,
+                #14002a 0%,
+                #1a1f68 45%,
+                #0d103a 100%
+            );
+            color: #ffe600;
+            font-size: 34px;
+            font-weight: 1000;
+            padding: 16px 0;
             text-align: center;
-            width: 100%; /* 固定寬度與隊伍欄相同 */
-            box-sizing: border-box;
-            border-bottom: 3px solid white;
-            letter-spacing: 2px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            
-            opacity: 0;
-            transform: translateY(-50px);
-            animation: stage1_in 0.6s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
+           box-sizing: border-box;
+            border:
+                2px solid #8f5bff;
+           border-bottom:
+                4px solid #ffffff;
+            letter-spacing: 4px;
+           text-shadow:
+               0 0 10px rgba(255,255,0,0.8),
+               0 0 25px rgba(255,255,0,0.5);
+           box-shadow:
+               0 0 12px rgba(120,80,255,0.6),
+                inset 0 0 20px rgba(255,255,255,0.05);
+           overflow: hidden;
+            clip-path:
+               polygon(
+                   16px 0,
+                   calc(100% - 16px) 0,
+                   100% 16px,
+                    100% calc(100% - 16px),
+                  calc(100% - 16px) 100%,
+                  16px 100%,
+                   0 calc(100% - 16px),
+                   0 16px
+               );
+
+    opacity: 0;
+    transform: translateY(-50px);
+    animation:
+        stage1_in 0.6s forwards,
+        evaPulse 4s infinite alternate;
         }
 
         @keyframes stage1_in {
             to { opacity: 1; transform: translateY(0); }
         }
+        .final-header::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: -120%;
+
+    width: 80%;
+    height: 100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.25),
+            transparent
+        );
+
+    transform: skewX(-25deg);
+
+    animation:
+        evaScan 5s infinite;
+}
+
+@keyframes evaScan {
+
+    0% {
+        left: -120%;
+    }
+
+    100% {
+        left: 150%;
+    }
+}
+
+@keyframes evaPulse {
+
+    0% {
+        box-shadow:
+            0 0 12px rgba(120,80,255,0.5);
+    }
+
+    100% {
+        box-shadow:
+            0 0 24px rgba(180,120,255,0.9);
+    }
+}
 
         /* ========================================== */
         /* 第二段動畫：表格背景進場 */
@@ -81,13 +161,38 @@
                     0 5px 15px rgba(0,0,0,0.5)
             );
         }
+        .score-grid::after {
+            content: "";
+           position: absolute;
+           inset: 0;
+           background:
+               repeating-linear-gradient(
+                   to bottom,
+                   rgba(255,255,255,0.03) 0px,
+                  rgba(255,255,255,0.03) 1px,
+                 transparent 2px,
+                 transparent 4px
+               );
+            pointer-events: none;
+           mix-blend-mode: overlay;
+        }
         .score-cell {
             height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
             background:
-                rgba(0,0,0,0.8);
+            linear-gradient(
+               135deg,
+               rgba(10,10,18,0.92),
+               rgba(0,0,0,0.96)
+            );
+
+border:
+    1px solid rgba(120,120,255,0.08);
+
+box-shadow:
+    inset 0 0 8px rgba(255,255,255,0.03);
             color: white;
             font-size: 32px;
             box-sizing: border-box;
@@ -116,7 +221,23 @@
             color: white;
             display: flex;
             align-items: center;
+            position: relative;
+            overflow: hidden;
         }
+           .team-label::after {
+               content: "";
+               position: absolute;
+               right: 10px;
+              top: 50%;
+              width: 22px;
+              height: 3px;
+               background:
+                   rgba(255,255,255,0.7);
+               box-shadow:
+                   0 0 8px rgba(255,255,255,0.6);
+                transform:
+                   translateY(-50%) skewX(-30deg);
+           }
         .away-color { background-color: #009EDB !important; }
         .home-color { background-color: #62338A !important; }
         
@@ -139,6 +260,9 @@
             max-width: 90px;
             height: 60px;
             text-align: center;
+            text-shadow:
+               0 0 10px rgba(255,255,0,0.7),
+               0 0 20px rgba(255,255,0,0.4);
             vertical-align: middle;
             padding: 0;
             font-size: 32px;
