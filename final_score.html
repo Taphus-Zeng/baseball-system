@@ -7,19 +7,20 @@
     <style>
         body {
             margin: 0;
-            overflow: hidden;
+            overflow: visible;
             background: transparent;
+            display: inline-block;
+            width: fit-content;
+            height: fit-content;
             font-family:
                 "Microsoft JhengHei",
                 "微軟正黑體",
                 sans-serif;
             font-weight: bold;
-            }
+        }
             /* ===== OBS 模式 ===== */
             body.obs-mode {
-
-                width: 1920px;
-                height: 1080px;
+                display: inline-block;
             }
 
             /* ===== Preview 模式 ===== */
@@ -33,11 +34,10 @@
 
         #final-container {
             position: relative;
-            margin-left: 50px;
-            margin-top: 50px;
-            display: flex;
+            display: inline-flex;
             flex-direction: column;
             width: max-content;
+            margin: 0;
         }
 
         /* ========================================== */
