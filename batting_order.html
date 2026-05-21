@@ -6,13 +6,22 @@
     <title>先發打序表 (蒸氣龐克完美對齊版)</title>
     <style>
         /* 基礎透明背景，適用於直播軟體疊加 */
-        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: "Georgia", "Microsoft JhengHei", serif; }
+        body {
+        margin: 0;
+        padding: 0;
+
+        /* ⭐ 改這裡 */
+        overflow: visible;
+
+        background-color: transparent;
+        font-family: "Georgia", "Microsoft JhengHei", serif;
+        }
         
         /* 自動縮放的外掛容器 */
         #scale-wrapper {
 
         position: absolute;
-        top: 0;
+        top: 0px;
         left: 0;
 
         display: inline-block;
@@ -32,18 +41,29 @@
         .board-container {
             position: relative;
             width: 450px;
-            height: 680px;
+            aspect-ratio: 450 / 760;
+            padding-top: 80px;
             filter: none;
-            padding: 20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-bottom: 20px;
             box-sizing: border-box;
-}    
+        }
         /* 讀取專屬背景圖 */
-        .board-bg { width: 100%; height: 100%; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; }
+        .board-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
 
         /* ====== 1. 隊伍名稱圖塊：改為長方形厚重金屬材質 ====== */
         .team-title-box {
             position: absolute;
-            top: -12.5%;   
+            top: 5%;   
             left: 0;
             width: 100%;
             z-index: 10;
@@ -89,27 +109,28 @@
         }
 
         /* ====== 打序列表容器 ====== */
-        .list-container { 
-            position: absolute; 
-            top: 17.3%;     
-            left: 24.5%;    
-            width: 62.5%;   
-            height: 68.3%;  
-            z-index: 10; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-            perspective: 1000px; 
+        .list-container {
+            position: absolute;
+            top: 21.5%;
+            left: 24%;
+            width: 63%;
+            height: 63%;
+            z-index: 8;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 12.5px;
+            perspective: 1000px;
         }
 
         /* 蒸氣龐克 3D 翻轉金屬牌 */
-        .flap-row { 
-            width: 100%; 
-            height: 8.2%;   
+        .flap-row {
+            width: 100%;
+            height: 8.2%;
             position: relative;
-            transform-style: preserve-3d; 
-            transform-origin: top; 
-            transform: rotateX(-90deg); 
+            transform-style: preserve-3d;
+            transform-origin: top;
+            transform: rotateX(-90deg);
             opacity: 0;
             display: flex;
             align-items: center;
@@ -178,6 +199,7 @@
             letter-spacing: 2px;
             margin-left: 15px; /* ✅ 姓名與背號之間的固定間距，確保姓名的第一個字絕對切齊 */
             text-align: left;
+            max-width: 150px;
         }
 
         /* ====== 動畫定義 ====== */
@@ -204,24 +226,29 @@
             pointer-events: none;
         }
     </style>
+    <link
+        id="theme-css"
+        rel="stylesheet"
+        href=""
+    >
 </head>
-<body>
+<body id="overlay-body">
 
 <div id="scale-wrapper">
-    <div class="overlay-container">
+    <div class="overlay-container batting-theme-container">
         
-        <div class="board-container">
+        <div class="board-container batting-board-container">
             <img src="board.png" class="board-bg" alt="Steampunk Board">
             
-            <div class="team-title-box">
-                <div class="team-title-plate">
+            <div class="team-title-box batting-title-box">
+                <div class="team-title-plate batting-title-plate">
                     <div class="team-title-inner">
                         <span class="team-title-text" id="team-title">載入打序中...</span>
                     </div>
                 </div>
             </div>
 
-            <div class="list-container" id="lineup-list">
+            <div class="list-container batting-list-container" id="lineup-list">
                 </div>
         </div>
 
@@ -259,7 +286,20 @@
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
   const urlTeam = urlParams.get('team'); // fallback 用
+  const theme =
+    urlParams.get('theme')
+    || 'default';
   
+    document.getElementById(
+        'theme-css'
+    ).href =
+        `themes/${theme}.css`;
+
+    document.getElementById(
+        'overlay-body'
+    ).className =
+        `theme-${theme}`;
+
   if (!gameId) {
       document.getElementById('team-title').innerText = "錯誤：參數遺失";
   } else {
@@ -273,9 +313,7 @@
       if (!snapshot.exists()) return;
       const data = snapshot.val();
 
-	// 🟢 接收風格標籤，並套用到最外層 body
-      const currentTheme = data.theme || 'modern';
-      document.body.className = `theme-${currentTheme}`;
+	
       
       const teams = getTeamsByInning(data.gameInfo);
 
@@ -310,11 +348,11 @@
           const rowDiv = document.createElement('div');
           rowDiv.className = 'flap-row';
           rowDiv.innerHTML = `
-              <div class="metal-plate">
-                  <div class="pos-badge">${pos}</div>
+              <div class="metal-plate batting-metal-plate">
+                  <div class="pos-badge batting-pos-badge">${pos}</div>
                   <div class="num-name-group">
                       <div class="player-num">${playerNum}</div>
-                      <div class="player-name">${playerName}</div>
+                      <div class="player-name batting-player-name">${playerName}</div>
                   </div>
               </div>
           `;
@@ -347,10 +385,10 @@
   window.addEventListener('resize', applyScale);
   applyScale();
   window.addEventListener('load', applyScale);
-  // ⭐ 10秒後自動淡出
+  // ⭐ 15秒後自動淡出
     setTimeout(() => {
     document.body.classList.add('overlay-hide');
-    }, 10000);
+    }, 15000);
 </script>
 </body>
 </html>
