@@ -1,0 +1,223 @@
+/* ===== SPK THEME ===== */
+
+:root {
+
+    --theme-main:
+        #00eaff;
+
+    --theme-accent:
+        #ff2aff;
+
+    --theme-bg:
+        rgba(0,0,0,0.78);
+
+    --theme-border:
+        rgba(0,234,255,0.5);
+
+    --theme-shadow:
+        rgba(0,234,255,0.3);
+}
+
+.scoreboard-container {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0,0,0,0.95),
+            rgba(15,20,30,0.92)
+        );
+
+    border:
+        2px solid var(--theme-border);
+
+    box-shadow:
+        0 0 18px var(--theme-shadow);
+}
+
+.team-name {
+
+    color:
+        var(--theme-main);
+
+    text-shadow:
+        0 0 10px #00eaff;
+}
+
+.team-score {
+
+    color:
+        white;
+
+    text-shadow:
+        0 0 10px #ff2aff;
+}
+/* ===== Cyber Glow ===== */
+
+.theme-spk .scoreboard-container {
+
+    animation:
+        cyberGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes cyberGlow {
+
+    from {
+
+        box-shadow:
+            0 0 12px rgba(0,234,255,0.3),
+            0 0 20px rgba(255,42,255,0.15);
+    }
+
+    to {
+
+        box-shadow:
+            0 0 20px rgba(0,234,255,0.7),
+            0 0 35px rgba(255,42,255,0.35);
+    }
+}
+/* =================================================
+   BATTING ORDER — SPK THEME
+================================================= */
+
+/* 全透明背景，讓直播畫面完全透出 */
+        .overlay-container {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
+        }
+        /* 蒸氣龐克大外框容器 */
+        .board-container {
+            position: relative;
+            width: 450px;
+            aspect-ratio: 450 / 760;
+            padding-top: 80px;
+            filter: none;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-bottom: 20px;
+            box-sizing: border-box;
+        }
+        /* 讀取專屬背景圖 */
+        .board-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* ====== 1. 隊伍名稱圖塊：改為長方形厚重金屬材質 ====== */
+        .team-title-box {
+            position: absolute;
+            top: 1%;   
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+            display: flex;
+            justify-content: center;
+        }
+
+        .theme-spk .team-title-plate{
+            background: linear-gradient(to bottom, #5c4d3c 0%, #3a2e21 100%);
+            border: 4px solid #8b6e4a; /* ✅ 加粗邊框：增加金屬重量感 */
+            border-radius: 6px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.9), 0 6px 8px rgba(0,0,0,0.6);
+            /* 🚫 移除了 transform: skew，回歸長方形 */
+            width: 80%;
+            padding: 12px 0;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        /* ====== 打序列表容器 ====== */
+        .theme-spk .list-container{
+            position: absolute;
+            top: 14.7%;
+            left: 25%;
+            width: 62.5%;
+            height: 72.7%;
+            z-index: 8;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 15px;
+            perspective: 1000px;
+        }
+
+        /* 蒸氣龐克 3D 翻轉金屬牌 */
+        .theme-spk .flap-row{
+            width: 100%;
+            height: 9.7%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform-origin: top;
+            transform: rotateX(-90deg);
+            opacity: 0;
+            display: flex;
+            align-items: center;
+        }
+        .theme-npb .flap-row{
+            filter:
+                drop-shadow(
+                0 0 8px rgba(120,190,255,.22)
+                );
+        }
+
+        .theme-spk .pos-badge{
+            background: radial-gradient(circle, #b89947, #755a20); 
+            color: #1a1105; 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 18px; /* ✅ 字體從 14px 放大至 18px */
+            font-weight: 900; 
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.8), inset -1px -1px 3px rgba(0,0,0,0.4); 
+            border: 1px solid #d4b56a; 
+            margin-right: 12px; /* ✅ 縮小徽章與背號的固定間距 */
+        }
+
+        .theme-spk .player-name{
+            color: #ffeaa7;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000, 0 0 8px rgba(241, 196, 15, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            letter-spacing: 2px;
+            margin-left: 15px; /* ✅ 姓名與背號之間的固定間距，確保姓名的第一個字絕對切齊 */
+            text-align: left;
+            max-width: 150px;
+        }
+
+        .flap-row.flip-down { animation: mechanicalFlip 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* ====== 4. 重新排版金屬牌內部：統一靠左推移，確保垂直對齊 ====== */
+        .theme-spk .metal-plate{
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #5c4d3c 0%, #3a2e21 100%);
+            border: 2px solid #8b6e4a;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 5px 5px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* 改為靠左對齊 */
+            padding-left: 35px; /* ✅ 將整組文字固定往右推，避免右側太空，又能保證垂直絕對對齊 */
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metal-plate::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 30%; background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent); pointer-events: none; }
