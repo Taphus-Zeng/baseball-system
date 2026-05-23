@@ -1,0 +1,54 @@
+/* ===== DEFAULT THEME ===== */
+
+:root {
+
+    --theme-main:
+        #ffffff;
+
+    --theme-accent:
+        #00d0ff;
+
+    --theme-bg:
+        rgba(0,0,0,0.65);
+
+    --theme-border:
+        rgba(255,255,255,0.2);
+
+    --theme-shadow:
+        rgba(0,0,0,0.5);
+}
+
+/* ===== SCOREBOARD ===== */
+
+.scoreboard-container {
+
+    background:
+        var(--theme-bg);
+
+    border:
+        1px solid var(--theme-border);
+
+    box-shadow:
+        0 0 12px var(--theme-shadow);
+}
+
+/* TEAM NAME */
+.team-name {
+
+    color:
+        var(--theme-main);
+}
+
+/* SCORE */
+.team-score {
+
+    color:
+        var(--theme-main);
+}
+
+/* INNING */
+.inning-display {
+
+    color:
+        var(--theme-accent);
+}
