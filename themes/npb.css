@@ -1,0 +1,246 @@
+/* ===== NPB THEME ===== */
+
+:root {
+
+    --theme-main:
+        #ffffff;
+
+    --theme-accent:
+        #ffd700;
+
+    --theme-bg:
+        rgba(30,30,30,0.92);
+
+    --theme-border:
+        rgba(255,255,255,0.1);
+
+    --theme-shadow:
+        rgba(0,0,0,0.4);
+}
+
+.scoreboard-container {
+
+    background:
+        linear-gradient(
+            90deg,
+            #1e1e1e,
+            #3a3a3a
+        );
+
+    border:
+        1px solid rgba(255,255,255,0.15);
+}
+
+.team-name {
+
+    color:
+        white;
+}
+
+.team-score {
+
+    color:
+        #ffd700;
+}
+/* ===== NPB Glass ===== */
+
+.theme-npb .scoreboard-container {
+
+    backdrop-filter:
+        blur(10px);
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(50,50,50,0.92),
+            rgba(25,25,25,0.88)
+        );
+}
+/* =================================================
+   BATTING ORDER — NPB CYBER THEME
+================================================= */
+
+.theme-npb .team-title-plate{
+            background:
+            linear-gradient(
+                180deg,
+                #313947 0%,
+                #161b23 100%
+            );
+            border:
+                3px solid #d7e1ec;
+            height:58px;
+            box-shadow:
+                inset 0 0 18px rgba(255,255,255,.06),
+                0 0 14px rgba(120,180,255,.25);
+            }
+.theme-npb .team-title-plate::after{
+            content:"";
+            position:absolute;
+            top:0;
+            left:-120%;
+            width:35%;
+            height:100%;
+            background:
+                linear-gradient(
+                90deg,
+               transparent,
+                rgba(120,190,255,.22),
+                transparent
+            );
+            transform:
+                skewX(-28deg);
+            animation:
+                npbHeaderSweep 5s linear infinite;
+        }
+
+.theme-npb .team-title-text{
+            color:#eef6ff;
+            text-shadow:
+                0 0 10px #7acfff,
+                0 0 18px rgba(120,190,255,.45);
+        }
+
+.theme-npb .metal-plate{
+                background:
+                linear-gradient(
+                    180deg,
+                    #2a313d 0%,
+                    #11151c 100%
+                );
+                border:
+                2px solid #d7dfea;
+                box-shadow:
+                    inset 0 0 12px rgba(255,255,255,.06),
+                    0 0 12px rgba(120,180,255,.30);
+            }
+
+.theme-npb .pos-badge{
+            background:
+                linear-gradient(
+                    #dfe6ef,
+                    #8d97a7
+                );
+            color:#111;
+            border:
+                1px solid #f4f7fc;
+            box-shadow:
+                0 0 8px rgba(120,190,255,.45);
+        }
+
+.theme-npb .player-num{
+            color:#6fd6ff;
+            text-shadow:
+                0 0 8px #38b6ff;
+        }
+
+.theme-npb .player-name{
+
+    color:#edf5ff;
+
+    text-shadow:
+
+        0 0 8px rgba(120,200,255,.25);
+}
+
+
+/* ---------- layout ---------- */
+
+.theme-npb .team-title-container{
+    position:absolute;
+    top:-7.5%;
+    left:8.5%;
+    width:82%;
+    z-index:50;
+    overflow:visible;
+}
+
+.theme-npb .list-container{
+    top:9%;
+    left:33%;
+    width:52.3%;
+    height:84.6%;
+    gap:17px;
+}
+
+.theme-npb .flap-row{
+    height:11.85%;        
+    filter:
+                drop-shadow(
+                0 0 8px rgba(120,190,255,.22)
+                );
+        }
+
+.theme-npb .metal-plate::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+
+    left:-120%;
+
+    width:40%;
+
+    height:100%;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.18),
+            transparent
+        );
+
+    transform:
+        skewX(-25deg);
+
+    animation:
+        npbSweep 4s linear infinite;
+}
+
+.theme-npb .team-title-plate::after{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+
+    left:-120%;
+
+    width:35%;
+
+    height:100%;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.22),
+            transparent
+        );
+
+    transform:
+        skewX(-28deg);
+
+    animation:
+        npbHeaderSweep 5s linear infinite;
+}
+
+@keyframes npbSweep{
+
+    from{ left:-120%; }
+
+    to{ left:140%; }
+}
+
+@keyframes npbHeaderSweep{
+
+    from{ left:-120%; }
+
+    to{ left:150%; }
+}
