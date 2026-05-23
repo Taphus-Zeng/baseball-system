@@ -1,0 +1,150 @@
+/* ===== EVA THEME ===== */
+
+:root {
+
+    --theme-main:
+        #7CFF00;
+
+    --theme-accent:
+        #bb00ff;
+
+    --theme-bg:
+        rgba(10,15,10,0.82);
+
+    --theme-border:
+        rgba(124,255,0,0.5);
+
+    --theme-shadow:
+        rgba(124,255,0,0.4);
+}
+
+/* ===== HUD ===== */
+
+.scoreboard-container {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(20,30,20,0.95),
+            rgba(5,5,5,0.9)
+        );
+
+    border:
+        2px solid var(--theme-border);
+
+    box-shadow:
+        0 0 20px var(--theme-shadow);
+
+    backdrop-filter:
+        blur(4px);
+}
+
+/* TEAM NAME */
+.team-name {
+
+    color:
+        var(--theme-main);
+
+    text-shadow:
+        0 0 8px #7CFF00;
+}
+
+/* SCORE */
+.team-score {
+
+    color:
+        #ffffff;
+
+    text-shadow:
+        0 0 12px #bb00ff;
+}
+
+/* INNING */
+.inning-display {
+
+    color:
+        var(--theme-accent);
+
+    text-shadow:
+        0 0 10px #bb00ff;
+}
+/* ===== EVA Scanline ===== */
+
+.theme-eva .scoreboard-container {
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+/* 掃描線 */
+.theme-eva .scoreboard-container::before {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(124,255,0,0.06),
+            rgba(124,255,0,0.06) 2px,
+            transparent 2px,
+            transparent 4px
+        );
+
+    pointer-events: none;
+
+    animation:
+        evaScan 6s linear infinite;
+}
+
+/* 掃描光 */
+.theme-eva .scoreboard-container::after {
+
+    content: "";
+
+    position: absolute;
+
+    top: -120%;
+
+    left: 0;
+
+    width: 100%;
+    height: 120%;
+
+    background:
+        linear-gradient(
+            to bottom,
+            transparent,
+            rgba(124,255,0,0.12),
+            transparent
+        );
+
+    animation:
+        evaSweep 4s linear infinite;
+}
+
+@keyframes evaSweep {
+
+    0% {
+        top: -120%;
+    }
+
+    100% {
+        top: 120%;
+    }
+}
+
+@keyframes evaScan {
+
+    from {
+        background-position-y: 0;
+    }
+
+    to {
+        background-position-y: 12px;
+    }
+}
