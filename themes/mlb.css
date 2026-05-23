@@ -1,0 +1,51 @@
+/* ===== MLB THEME ===== */
+
+:root {
+
+    --theme-main:
+        #ffffff;
+
+    --theme-accent:
+        #e10600;
+
+    --theme-bg:
+        rgba(10,25,45,0.92);
+
+    --theme-border:
+        rgba(255,255,255,0.15);
+
+    --theme-shadow:
+        rgba(0,0,0,0.4);
+}
+
+.scoreboard-container {
+
+    background:
+        linear-gradient(
+            90deg,
+            #0b1d3a,
+            #112f5c
+        );
+
+    border:
+        1px solid var(--theme-border);
+}
+
+.team-name {
+
+    color:
+        white;
+}
+
+.team-score {
+
+    color:
+        white;
+}
+/* ===== MLB TV Style ===== */
+
+.theme-mlb .scoreboard-container {
+
+    box-shadow:
+        0 8px 24px rgba(0,0,0,0.45);
+}
