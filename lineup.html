@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>先發守備陣容疊加畫面 (淺色透視與完美邊界版)</title>
+    <title>先發守備陣容疊加畫面</title>
     <style>
         /* ✅ 1. 基礎背景設定
            這裡將 body 背景改為淺色 (白色)，並設定 rgba 的透明度。
@@ -233,7 +233,7 @@ else{
         const team = teams.fielding || urlTeam;
 
         const teamName = data.teams?.[team]?.name || "未命名隊伍";
-            document.getElementById('team-title').innerText = `${teamName} - 先發守備陣容`;
+            document.getElementById('team-title').innerText = `${teamName} - 場上守備陣容`;
 
         const rosterData = data.rosters?.[team] || {};
         const lineupData = data.lineups?.[team] || {};
