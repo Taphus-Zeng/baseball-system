@@ -351,19 +351,18 @@ box-shadow:
     const gameId =
         urlParams.get("gameId");
 
-    const theme =
-    
-        urlParams.get("theme")
-        || "default";
-        document.getElementById(
-            "theme-css"
-        ).href =
-            `themes/${theme}.css`;
+    function applyTheme(theme){
 
-        document.getElementById(
-            "overlay-body"
-        ).className =
-            `theme-${theme}`;
+    document.getElementById(
+        "theme-css"
+    ).href =
+        `themes/${theme}.css`;
+
+    document.getElementById(
+        "overlay-body"
+    ).className =
+        `theme-${theme}`;
+    }
 
         // ===== Preview / OBS mode =====
         if (window.self !== window.top) {
@@ -383,9 +382,13 @@ box-shadow:
             const basePath = gameId ? `games/${gameId}` : "scoreboard";
 
     onValue(ref(db, basePath), (snap) => {
+
         const data = snap.val();
-        window.currentGameData = data;
-        if (!data) return;
+            window.currentGameData = data;
+            if (!data) return;
+            applyTheme(
+                data.theme || "default"
+        );
 
         const currentInning = data.gameInfo?.inning || 1;
         const isTop = data.gameInfo?.isTop ?? true;
@@ -539,8 +542,6 @@ html += `
     <div class="
         total-cell
         final-total-cell
-    " style="
-        background:#444;
     ">
         <span class="
             score-val
@@ -586,8 +587,6 @@ html += `
     <div class="
         total-cell
         final-total-cell
-    " style="
-        background:#444;
     ">
         <span class="
             score-val
