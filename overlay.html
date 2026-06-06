@@ -125,15 +125,20 @@
         .login-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .login-box button { width: 100%; padding: 10px; background: #101451; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
+    <link
+        id="theme-css"
+        rel="stylesheet"
+        href=""
+    >
 </head>
 
-<body class="theme-modern">
+<body id="overlay-body">
 
 <!-- 登入層 -->
 
 
 <div id="scale-wrapper">
-    <div class="scoreboard field">
+    <div class="scoreboard field scoreboard-container">
         
         <div class="pitcher-row-overlay" id="pitcher-container">
             <div class="pitcher-info-overlay"><span class="pitcher-label-overlay">P</span><span class="pitcher-name-overlay" id="overlay-pitcher-name">--</span></div>
@@ -152,7 +157,18 @@
             <div class="team-row team-home"><div class="team-name" id="home-name">主隊</div><div class="team-score" id="home-score">0</div></div>
             <div class="inning-bases-area">
                 <div class="bases-container"><div class="base-diamond" id="base-2"></div><div class="base-diamond" id="base-3"></div><div class="base-diamond" id="base-1"></div></div>
-                <div class="inning-box"><span class="inning-arrow" id="inning-half">▲</span><span id="inning-num">1</span></div>
+                <div class="inning-box inning-display">
+                    <span
+                        class="inning-arrow"
+                        id="inning-half">
+                        ▲
+                    </span>
+
+                    <span id="inning-num">
+                        1
+                    </span>
+
+                    </div>
             </div>
         </div>
         <div class="count-row">
@@ -215,8 +231,7 @@ import { onValue, update, ref } from "https://www.gstatic.com/firebasejs/10.8.0/
 // ===== Firebase 讀取邏輯 =====
 function startFirebaseSync() {
     const gameId = new URLSearchParams(location.search).get("gameId");
-
-        console.log("🔥 overlay gameId =", gameId);   // ⭐ 加這行
+    
 
     if (!gameId) {
         document.getElementById("game-title").innerText = "❌ 缺少 gameId";
@@ -231,6 +246,17 @@ function startFirebaseSync() {
 
         const data = snap.val();
         if (!data) return;
+
+        const theme =
+            data.theme || 'default';
+            document.getElementById(
+            'theme-css'
+            ).href =
+            `themes/${theme}.css`;
+            document.getElementById(
+            'overlay-body'
+            ).className =
+            `theme-${theme}`;
 
         document.getElementById('game-title').innerText = data.title || '';
 
