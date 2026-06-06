@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>先發打序表 (蒸氣龐克)</title>
+    <title>先發打序表 (蒸氣龐克完美對齊版)</title>
     <style>
         /* 基礎透明背景，適用於直播軟體疊加 */
         body {
@@ -155,12 +155,12 @@
             top: 14.7%;
             left: 25%;
             width: 62.5%;
-            height: 72.7%;
+            height: 73%;
             z-index: 8;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            gap: 15px;
+            gap: 13px;
             perspective: 1000px;
         }
 
@@ -346,10 +346,7 @@
         }
 
         .overlay-hide {
-            animation: overlayFa
-            
-            
-            eOut 1s ease forwards;
+            animation: overlayFadeOut 1s ease forwards;
             pointer-events: none;
         }
     </style>
@@ -417,40 +414,44 @@
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
   const urlTeam = urlParams.get('team'); // fallback 用
-  const theme =
-    urlParams.get('theme')
-    || 'default';
   
-    document.getElementById(
-        'theme-css'
-    ).href =
-        `themes/${theme}.css`;
-
-    document.getElementById(
-        'overlay-body'
-    ).className =
-        `theme-${theme}`;
 
   if (!gameId) {
       document.getElementById('team-title').innerText = "錯誤：參數遺失";
   } else {
       loadBattingOrder();
   }
-    const boardBg =
-        document.getElementById('board-bg');
-        if(theme==="npb"){
-        boardBg.src =
-            "assets/npb_batter_board.png";
-        }
+    
 
   async function loadBattingOrder() {
-      const basePath = `games/${gameId}`;
-      const snapshot = await get(child(dbRef, basePath));
+        const basePath = `games/${gameId}`;
+        const snapshot = await get(child(dbRef, basePath));
       
       if (!snapshot.exists()) return;
-      const data = snapshot.val();
+        const data = snapshot.val();
+        const theme =
+            data.theme || 'default';
+        const boardBg =
+            document.getElementById('board-bg');
 
-	
+        if(theme==="npb"){
+
+            boardBg.src =
+            "assets/npb_batter_board.png";
+        }else{
+        boardBg.src =
+            "assets/steampunk_board.png";
+        }
+
+            document.getElementById(
+            'theme-css'
+        ).href =
+            `themes/${theme}.css`;
+
+        document.getElementById(
+        'overlay-body'
+        ).className =
+        `theme-${theme}`;
       
       const teams = getTeamsByInning(data.gameInfo);
 
@@ -462,6 +463,8 @@
 
       const rosterData = data.rosters?.[team] || {};
       const lineupData = data.lineups?.[team] || {};
+      const includePitcher =
+            lineupData.includePitcher || false;
       const batters = lineupData.batters || {};
 
       const listContainer = document.getElementById('lineup-list');
@@ -476,27 +479,26 @@ let playerName = "-----------------";
 // ===== 第10列：Pitcher =====
 if (i === 9) {
     pos = "P";
-    const currentPitcherId =
-        data.currentPitcherId;
-    const pitchers =
-        data.pitchers || {};
+    const pitcherIndex =
+    lineupData.pitcherIndex;
+
+if (
+    pitcherIndex !== undefined &&
+    pitcherIndex !== -1
+) {
+
     const pitcher =
-        pitchers[currentPitcherId];
-    console.log({
-        team,
-        currentPitcherId,
-        pitcher
-    });
+        rosterData[pitcherIndex];
 
     if (pitcher) {
+
         playerNum =
             pitcher.num || "--";
+
         playerName =
             pitcher.name || "Pitcher";
-    } else {
-        playerNum = "--";
-        playerName = "NO PITCHER";
     }
+}
 }
 
 // ===== 一般打序 =====
