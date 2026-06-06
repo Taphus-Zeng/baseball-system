@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>先發守備陣容疊加畫面</title>
+    <title>先發守備陣容疊加畫面 (淺色透視與完美邊界版)</title>
     <style>
         /* ✅ 1. 基礎背景設定
            這裡將 body 背景改為淺色 (白色)，並設定 rgba 的透明度。
@@ -183,19 +183,7 @@
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
   const urlTeam = urlParams.get('team'); // fallback 用
-  const theme =
-    urlParams.get('theme')
-    || 'default';
-  
-    document.getElementById(
-        'theme-css'
-    ).href =
-        `themes/${theme}.css`;
-
-    document.getElementById(
-        'overlay-body'
-    ).className =
-        `theme-${theme}`;  
+   
   if (!gameId) {
       document.getElementById('team-title').innerText = "錯誤：缺少賽事或隊伍參數";
   } else {
@@ -204,20 +192,7 @@
   const fieldBg =
     document.getElementById('field-bg');
 
-if(theme==="spk"){
-    fieldBg.src =
-        "assets/lineup_field_spk.png";
-}
 
-else if(theme==="npb"){
-    fieldBg.src =
-        "assets/lineup_field_npb.png";
-}
-
-else{
-    fieldBg.src =
-        "field.png";
-}
 
   async function loadDefensiveLineup() {
       const basePath = `games/${gameId}`;
@@ -225,23 +200,62 @@ else{
       
       if (!snapshot.exists()) return;
       const data = snapshot.val();
-    
-      
+
+        const theme =
+        data.theme || 'default';
+
+        document.getElementById(
+            'theme-css'
+        ).href =
+        `themes/${theme}.css`;
+
+        document.getElementById(
+        'overlay-body'
+        ).className =
+            `theme-${theme}`;
+
+        if(theme==="spk"){
+        fieldBg.src =
+        "assets/lineup_field_spk.png";
+        }
+
+        else if(theme==="npb"){
+        fieldBg.src =
+        "assets/lineup_field_npb.png";
+        }
+
+        else{
+        fieldBg.src =
+        "field.png";
+        }
+
       const teams = getTeamsByInning(data.gameInfo);
 
         // ⭐ 守備一定用 fielding
         const team = teams.fielding || urlTeam;
 
         const teamName = data.teams?.[team]?.name || "未命名隊伍";
-            document.getElementById('team-title').innerText = `${teamName} - 場上守備陣容`;
+            document.getElementById('team-title').innerText = `${teamName} - 先發守備陣容`;
 
         const rosterData = data.rosters?.[team] || {};
         const lineupData = data.lineups?.[team] || {};
-      const defPositions = { 'P': null, 'C': null, '1B': null, '2B': null, '3B': null, 'SS': null, 'LF': null, 'CF': null, 'RF': null, 'DH': null };
+        const defPositions = { 'P': null, 'C': null, '1B': null, '2B': null, '3B': null, 'SS': null, 'LF': null, 'CF': null, 'RF': null, 'DH': null };
 
-      if (lineupData.pitcherIndex !== undefined && lineupData.pitcherIndex !== -1) {
-          defPositions['P'] = rosterData[lineupData.pitcherIndex];
-      }
+        const includePitcher =
+            lineupData.includePitcher || false;
+
+        if (
+            lineupData.pitcherIndex !== undefined &&
+            lineupData.pitcherIndex !== -1
+        ) {
+            defPositions['P'] =
+            rosterData[lineupData.pitcherIndex];
+        }
+
+        // ⭐ 投手打擊時不顯示 DH
+        if (includePitcher) {
+            delete defPositions['DH'];
+        }
 
       const batters = lineupData.batters || {};
       for (let i = 0; i < 9; i++) {
