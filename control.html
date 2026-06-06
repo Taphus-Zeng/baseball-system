@@ -749,7 +749,7 @@
     <div style="font-size: 18px; font-weight: bold;" id="nav-game-title">賽事控制台</div>
     <div class="overlay-url-group">
         <a href="control.html" style="color: rgb(33, 218, 73); text-decoration: none; border: 1px solid white; padding: 5px 10px; border-radius: 4px; font-size: 16px;">回首頁大廳</a>
-        <button class="url-btn" onclick="copyOverlayUrl()">記分板 URL</button>
+        <button class="url-btn" onclick="copyOverlayUrl()">計分 URL</button>
         <button class="url-btn" onclick="copyLineupUrl()">守備 URL</button>
         <button class="url-btn url-btn-last" onclick="copyBatterUrl()">打序 URL</button>
         <!-- ⭐ 新增 -->
@@ -918,13 +918,12 @@
                 <button class="btn-score" onclick="updateScore('home', 1)">+1</button>
                 <button class="btn-score" onclick="updateScore('home', -1)">-1</button>
                 <div
-    <div
-    style="
-        display:flex;
-        gap:10px;
-        margin-top:10px;
-        width:100%;
-        "
+                    style="
+                    display:flex;
+                    gap:10px;
+                    margin-top:10px;
+                    width:100%;
+                    "
     >
 
 </div>
@@ -1085,13 +1084,31 @@
         </button>
         </div>
 
+        <div style="display:flex; gap:25px;">
+
         <label class="dh-toggle-label">
-        Include pitcher in the batter line
-        <label class="switch">
-            <input type="checkbox" id="dh-toggle" onchange="updateGlobalDH(this.checked)">
-            <span class="slider"></span>
+            客隊 投手打擊
+            <label class="switch">
+                <input
+                    type="checkbox"
+                    id="away-dh-toggle"
+                    onchange="updateTeamDH('away',this.checked)">
+                <span class="slider"></span>
+            </label>
         </label>
+
+        <label class="dh-toggle-label">
+            主隊 投手打擊
+            <label class="switch">
+                <input
+                    type="checkbox"
+                    id="home-dh-toggle"
+                    onchange="updateTeamDH('home',this.checked)">
+                <span class="slider"></span>
+            </label>
         </label>
+
+</div>
         </div>
 
         <div class="teams-lineup-grid">
@@ -1246,6 +1263,12 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+
+    window.db = db;
+    window.ref = ref;
+    window.update = update;
+    window.getBasePathForTheme = () => basePath;
+
   const dbRef = ref(db);
   const auth = getAuth(app); // 新增：初始化 Auth
   let appInitialized = false;
@@ -1668,6 +1691,7 @@ modal.style.display = 'flex';
       // 構建比賽初始結構
       const initGameData = {
           title: title,
+          theme: "default",
           createdAt: Date.now(),
           teams: {
               away: { name: awayData.name, score: 0 },
@@ -1689,7 +1713,15 @@ modal.style.display = 'flex';
             away: {},
             home: {}
           },
-          lineups: { includePitcher: false, away: {}, home: {} }
+          lineups: {
+            away: {
+            includePitcher:false
+            },
+
+            home: {
+            includePitcher:false
+            }
+        }
       };
 
       await set(ref(db, `games/${newGameId}`), initGameData);
@@ -1720,7 +1752,20 @@ modal.style.display = 'flex';
           const data = snapshot.val();
           if(!data) return;
 
-        // ⭐⭐⭐ 就插在這裡 ⭐⭐⭐
+        if (data.theme) {
+            const selector =
+            document.getElementById(
+                'theme-selector'
+            );
+
+        if (
+            selector.value
+            !== data.theme
+            ) {
+            selector.value =
+            data.theme;
+            }
+        }
 
           if(data.title !== undefined) {
               document.getElementById('title-input').value = data.title;
@@ -1756,7 +1801,22 @@ modal.style.display = 'flex';
           if(data.pitchCount) {
               document.getElementById('ctrl-away-pc').innerText = data.pitchCount.away || 0;
               document.getElementById('ctrl-home-pc').innerText = data.pitchCount.home || 0;
-              // ===== 同步目前投手名字 =====
+              
+            }
+          renderPitcherRecords(data.pitchers || {}, data.currentPitcherId);
+
+          localState.rosters = data.rosters || {};
+          localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} };
+          localState.currentBatter = data.currentBatter || null;
+          
+            document.getElementById('away-dh-toggle').checked =
+            localState.lineups.away?.includePitcher || false;
+
+            document.getElementById('home-dh-toggle').checked =
+            localState.lineups.home?.includePitcher || false;
+          
+          renderAllLineups();
+          // ===== 同步目前投手名字 =====
                 document.getElementById(
                     'ctrl-away-pitcher-name'
                     ).innerText =
@@ -1770,15 +1830,7 @@ modal.style.display = 'flex';
                 document.getElementById(
                     'home-p-name'
                     )?.innerText || '--';
-            }
-          renderPitcherRecords(data.pitchers || {}, data.currentPitcherId);
 
-          localState.rosters = data.rosters || {};
-          localState.lineups = data.lineups || { includePitcher: false, away: {}, home: {} };
-          localState.currentBatter = data.currentBatter || null;
-          document.getElementById('dh-toggle').checked = localState.lineups.includePitcher || false;
-          
-          renderAllLineups();
           updateBatterPanelDisplay();
           if (!window._tabInitialized) {
             const savedTab = localStorage.getItem('activeTab');
@@ -2080,36 +2132,93 @@ if (current) {
     update(ref(db, `${basePath}/pitchCount`), { [team]: 0 });
     autoSwitchTab('pitching');
     };
-  window.updateGlobalDH = (isChecked) => {
-      update(ref(db, `${basePath}/lineups`), { includePitcher: isChecked });
-      ['away', 'home'].forEach(team => {
-          const lineup = localState.lineups[team] || {};
-          const pIdx = lineup.pitcherIndex !== undefined ? lineup.pitcherIndex : -1;
-          let batters = [];
-          for(let i = 0; i < 9; i++) batters.push(lineup.batters?.[i] || { rosterIndex: -1, pos: '' });
-          let changed = false;
+  window.updateTeamDH = (team, isChecked) => {
 
-          if (!isChecked) {
-              for (let i = 0; i < 9; i++) { if ((pIdx !== -1 && batters[i].rosterIndex == pIdx) || batters[i].pos === 'P') { batters[i] = { rosterIndex: -1, pos: '' }; changed = true; } }
-          } else {
-              if (pIdx !== -1) {
-                  let alreadyIn = false, emptyIdx = -1, dhIdx = -1;
-                  for (let i = 0; i < 9; i++) {
-                      if (batters[i].rosterIndex == pIdx) alreadyIn = true;
-                      if (batters[i].pos === 'DH') dhIdx = i;
-                      if (batters[i].rosterIndex == -1 && emptyIdx === -1) emptyIdx = i;
-                  }
-                  if (!alreadyIn) {
-                      let targetIdx = dhIdx !== -1 ? dhIdx : emptyIdx;
-                      if (targetIdx !== -1) { batters[targetIdx] = { rosterIndex: pIdx, pos: 'P' }; changed = true; }
-                  } else {
-                      for (let i = 0; i < 9; i++) { if (batters[i].rosterIndex == pIdx && batters[i].pos !== 'P') { batters[i].pos = 'P'; changed = true; } }
-                  }
-              }
-          }
-          if (changed) set(ref(db, `${basePath}/lineups/${team}/batters`), batters);
-      });
-  };
+    update(
+        ref(db,
+        `${basePath}/lineups/${team}`),
+        {
+            includePitcher:isChecked
+        }
+    );
+
+    const lineup =
+        localState.lineups[team] || {};
+
+    const pIdx =
+        lineup.pitcherIndex ?? -1;
+
+    let batters = [];
+
+    for(let i=0;i<9;i++){
+
+        batters.push(
+            lineup.batters?.[i]
+            || {
+                rosterIndex:-1,
+                pos:''
+            }
+        );
+    }
+
+    if(isChecked){
+
+        let alreadyIn = false;
+
+        for(let i=0;i<9;i++){
+
+            if(
+                batters[i].rosterIndex
+                == pIdx
+            ){
+                alreadyIn = true;
+            }
+        }
+
+        if(!alreadyIn){
+
+            for(let i=0;i<9;i++){
+
+                if(
+                    batters[i].rosterIndex
+                    == -1
+                ){
+
+                    batters[i] = {
+                        rosterIndex:pIdx,
+                        pos:'P'
+                    };
+
+                    break;
+                }
+            }
+        }
+
+    } else {
+
+        for(let i=0;i<9;i++){
+
+            if(
+                batters[i].rosterIndex
+                == pIdx
+            ){
+
+                batters[i] = {
+                    rosterIndex:-1,
+                    pos:''
+                };
+            }
+        }
+    }
+
+    set(
+        ref(
+            db,
+            `${basePath}/lineups/${team}/batters`
+        ),
+        batters
+    );
+};
 
   window.openRosterModal = (team) => {
       currentEditingTeam = team;
@@ -2165,7 +2274,9 @@ if (current) {
       if(!currentEditingTeam) return;
       const pIdx = parseInt(document.getElementById('pitcher-select').value);
       const team = currentEditingTeam;
-      const includeP = document.getElementById('dh-toggle').checked;
+      const includeP =
+        localState.lineups[team]
+        ?.includePitcher || false;
 
       let updates = {};
       updates[`${basePath}/lineups/${team}/pitcherIndex`] = pIdx;
@@ -2304,13 +2415,46 @@ if (current) {
 };
   window.updateTeam = (team) => update(ref(db, `${basePath}/teams/${team}`), { name: document.getElementById(`${team}-name`).value });
   window.stepInning = async (d) => {
+        const outsSnap =
+            await get(
+                child(
+                dbRef,
+                    `${basePath}/count/outs`
+                )
+            );
+
+        const outs =
+            outsSnap.val() || 0;
+
+        if (outs < 2) {
+
+        const ok = confirm(
+            `目前只有 ${outs} 出局，確定要換局？`
+        );
+
+        if (!ok) return;
+        }
+
       const i = await get(child(dbRef, `${basePath}/gameInfo/inning`)); const t = await get(child(dbRef, `${basePath}/gameInfo/isTop`));
       let inng = i.exists()?i.val():1, isT = t.exists()?t.val():true;
       if(d==='next'){ if(isT) isT=false; else{ isT=true; inng++; } } else if(d==='prev'){ if(!isT) isT=true; else if(inng>1){ isT=false; inng--; } }
-      await update(ref(db, `${basePath}/gameInfo`), {
-    inning: inng,
-    isTop: isT
-});
+      await update(ref(db), {
+        [`${basePath}/gameInfo/inning`]: inng,
+        [`${basePath}/gameInfo/isTop`]: isT,
+
+        [`${basePath}/count/balls`]: 0,
+        [`${basePath}/count/strikes`]: 0,
+        [`${basePath}/count/outs`]: 0,
+
+        [`${basePath}/bases/first`]: false,
+        [`${basePath}/bases/second`]: false,
+        [`${basePath}/bases/third`]: false,
+
+        [`${basePath}/radar/speed`]: 0,
+
+        [`${basePath}/currentBatter/team`]: "",
+        [`${basePath}/currentBatter/rosterIndex`]: -1
+    });
 
 // ===== 建立空白 inning =====
 const offenseTeam =
@@ -2441,9 +2585,8 @@ window.swapTeams = async () => {
     };
 
     const newLineups = {
-        includePitcher: data.lineups?.includePitcher || false,
-        away: data.lineups?.home || {},
-        home: data.lineups?.away || {}
+    away: data.lineups?.home || {},
+    home: data.lineups?.away || {}
     };
 
     const newPitchCount = {
@@ -2801,7 +2944,9 @@ function doResize(clientX, clientY) {
 }
 window.addEventListener('DOMContentLoaded', () => {
 
-    initPreviewResize();
+    if (window.initPreviewResize) {
+        window.initPreviewResize();
+        }
 
     initPreviewUI();
 
@@ -2871,9 +3016,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Theme 切換
     themeSelector.addEventListener(
-        'change',
-        updatePreviewFrame
-    );
+    'change',
+    async () => {
+
+        const theme =
+            themeSelector.value;
+
+        await window.update(
+        window.ref(
+        window.db,
+        window.getBasePathForTheme()
+        ),
+        {
+            theme
+        }
+        );
+
+        updatePreviewFrame();
+    }
+);
 
     // Overlay Type 切換
     typeSelector.addEventListener(
