@@ -363,10 +363,11 @@
         
         <div class="board-container batting-board-container">
             <img
-                class="board-bg"
-                id="board-bg"
-                src="assets/steampunk_board.png"
-            >
+            class="board-bg batting-bg"
+            id="board-bg"
+            src=""
+            style="opacity:0"
+        >
             
             <div class="team-title-box batting-title-box">
                 <div class="team-title-plate batting-title-plate">
@@ -428,20 +429,20 @@
         const snapshot = await get(child(dbRef, basePath));
       
       if (!snapshot.exists()) return;
+
         const data = snapshot.val();
         const theme =
             data.theme || 'default';
-        const boardBg =
-            document.getElementById('board-bg');
 
-        if(theme==="npb"){
+            document.getElementById(
+                'theme-css'
+            ).href =
+            `themes/${theme}.css`;
 
-            boardBg.src =
-            "assets/npb_batter_board.png";
-        }else{
-        boardBg.src =
-            "assets/steampunk_board.png";
-        }
+            document.getElementById(
+                'overlay-body'
+            ).className =
+                `theme-${theme}`;
 
             document.getElementById(
             'theme-css'
@@ -453,7 +454,16 @@
         ).className =
         `theme-${theme}`;
       
-      const teams = getTeamsByInning(data.gameInfo);
+      const boardBg =
+        document.getElementById("board-bg");
+        boardBg.src =
+        `assets/${theme}_batter_board.png`;
+
+        boardBg.onload = () => {
+        boardBg.style.opacity = "1";
+        };
+      
+        const teams = getTeamsByInning(data.gameInfo);
 
         // ⭐ 打序一定用 batting
         const team = teams.batting || urlTeam;
