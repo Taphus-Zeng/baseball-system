@@ -1,4 +1,4 @@
-/* ===== MLB THEME ===== */
+/* ===== JURASSIC THEME ===== */
 
 :root {
 
@@ -6,13 +6,13 @@
         #ffffff;
 
     --theme-accent:
-        #e10600;
+        #ffd700;
 
     --theme-bg:
-        rgba(10,25,45,0.92);
+        rgba(30,30,30,0.92);
 
     --theme-border:
-        rgba(255,255,255,0.15);
+        rgba(255,255,255,0.1);
 
     --theme-shadow:
         rgba(0,0,0,0.4);
@@ -23,12 +23,12 @@
     background:
         linear-gradient(
             90deg,
-            #0b1d3a,
-            #112f5c
+            #1e1e1e,
+            #3a3a3a
         );
 
     border:
-        1px solid var(--theme-border);
+        1px solid rgba(255,255,255,0.15);
 }
 
 .team-name {
@@ -40,12 +40,514 @@
 .team-score {
 
     color:
-        white;
+        #ffd700;
 }
-/* ===== MLB TV Style ===== */
+/* ===== NPB Glass ===== */
 
 .theme-mlb .scoreboard-container {
 
+    backdrop-filter:
+        blur(10px);
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(50,50,50,0.92),
+            rgba(25,25,25,0.88)
+        );
+}
+/* =================================================
+   BATTING ORDER — JURASSIC STONE THEME
+================================================= */
+
+.theme-mlb .team-title-plate{
+    background:
+        linear-gradient(
+            180deg,
+            #8b8a83 0%,
+            #68665f 45%,
+            #3e3d38 100%
+        );
+    border:
+        3px solid #bda77b;
     box-shadow:
-        0 8px 24px rgba(0,0,0,0.45);
+        inset 0 0 12px rgba(255,255,255,.12),
+        0 0 8px rgba(0,0,0,.45);
+    height:55px;
+}
+
+.theme-mlb .team-title-plate::after{
+            display:none;
+        }
+
+.theme-mlb .team-title-text{
+            color:#ffd94c;
+            text-shadow:
+                2px 2px 5px #4b3400,
+                0 0 18px rgba(120,190,255,.45);
+        }
+
+.theme-mlb .batting-metal-plate{
+    background:
+        linear-gradient(
+            180deg,
+            #4b4a46,
+            #2f2d2a
+        );
+    border-radius:6px;
+    padding-left:24px;
+    height:92%;
+    border:
+        2px solid #8f7b52;
+    box-shadow:
+        inset 0 0 8px rgba(255,255,255,.05),
+        0 0 4px rgba(0,0,0,.35);
+}
+
+.theme-mlb .batting-pos-badge{
+    background:
+        linear-gradient(
+            #cab98a,
+            #8d7a52
+        );
+    width:34px;
+    height:34px;
+        color:#231f1a;
+    border:
+        1px solid #e3d6a8;
+    box-shadow:none;
+}
+
+.theme-mlb .player-num{
+            color:#ffd76a;
+            text-shadow:
+                0 0 8px #38b6ff;
+        }
+
+.theme-mlb .batting-player-name{
+
+    color:#fff8df !important;
+    font-weight:700;
+    letter-spacing:.4px;
+    text-shadow:
+        0 1px 2px rgba(0,0,0,.8),
+        0 0 4px rgba(255,248,223,.2);
+}
+
+/* ---------- layout ---------- */
+
+.theme-mlb .batting-title-box{
+    top:19.8%;
+    left:10;
+    width:75%;
+    display:flex;
+    justify-content:center;
+}
+
+.theme-mlb .list-container{
+    top:28.2%;
+    left:20%;
+    width:65%;
+    height:55.5%;
+    gap:7px;
+}
+
+.theme-mlb .flap-row{
+    height:8.15%;        
+    filter:
+                drop-shadow(
+                2px 2px 5px rgba(
+                0,
+                0,
+                0,
+                .35
+                )
+            );
+}
+
+.theme-mlb .batting-metal-plate::before{
+
+    display:none;
+}
+
+@keyframes mlbSweep{
+
+    from{ left:-120%; }
+
+    to{ left:140%; }
+}
+
+@keyframes mlbHeaderSweep{
+
+    from{ left:-120%; }
+
+    to{ left:150%; }    
+}
+
+/* =================================================
+   FINAL SCORE — JURASSIC CYBER THEME
+================================================= */
+
+.theme-mlb .final-header{
+
+    background:
+        linear-gradient(
+            180deg,
+            #616975 0%,
+            #353c47 45%,
+            #161b23 100%
+        );
+
+    border:
+        2px solid #d7e1ec;
+
+    color:#eef6ff;
+
+    text-shadow:
+        0 0 10px #7acfff,
+        0 0 18px rgba(120,190,255,.45);
+
+    box-shadow:
+        inset 0 0 18px rgba(255,255,255,.06),
+        0 0 16px rgba(120,180,255,.25);
+}
+
+.theme-mlb .final-header::before{
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.22),
+            transparent
+        );
+
+    animation:
+        mlbHeaderSweep 5s linear infinite;
+}
+
+/* 表格主體 */
+
+.theme-mlb .score-grid{
+
+    filter:
+        drop-shadow(
+            0 0 18px rgba(120,180,255,.25)
+        );
+}
+
+/* 局數標題 */
+
+.theme-mlb .inning-header-cell,
+.theme-mlb .inning-header-fill{
+
+    background:
+        linear-gradient(
+            180deg,
+            #434b56,
+            #222831
+        ) !important;
+
+    color:#dfe8f2;
+
+    border:
+        1px solid rgba(
+            180,
+            210,
+            255,
+            .18
+        );
+}
+
+/* 每局分數格 */
+
+.theme-mlb .inning-cell{
+
+    position:relative;
+
+    background:
+        linear-gradient(
+            180deg,
+            #0f141b,
+            #04070b
+        ) !important;
+
+    border:
+        1px solid rgba(
+            160,
+            190,
+            255,
+            .08
+        );
+
+    overflow:hidden;
+}
+
+.theme-mlb .inning-cell::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+    left:-120%;
+
+    width:40%;
+    height:100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.12),
+            transparent
+        );
+
+    transform:
+        skewX(-25deg);
+
+    animation:
+        mlbSweep 6s linear infinite;
+}
+
+/* 客隊 */
+
+.theme-mlb .away-color{
+
+    background:
+        linear-gradient(
+            180deg,
+            #2f6fe8,
+            #123eb5
+        ) !important;
+
+    border-left:
+        5px solid #9edcff;
+}
+
+/* 主隊 */
+
+.theme-mlb .home-color{
+
+    background:
+        linear-gradient(
+            180deg,
+            #8b4fff,
+            #4d1cb4
+        ) !important;
+
+    border-left:
+        5px solid #efc1ff;
+}
+
+/* R欄 */
+
+.theme-mlb .final-total-cell{
+
+    background:
+        linear-gradient(
+            180deg,
+            #212c48,
+            #101a32
+        ) !important;
+}
+
+.theme-mlb .final-total-cell .score-val{
+
+    color:#ffe36b;
+
+    text-shadow:
+        0 0 12px #ffe36b;
+}
+
+/* H欄 */
+
+.theme-mlb .hit-total-cell{
+
+    background:
+        linear-gradient(
+            180deg,
+            #203828,
+            #102018
+        ) !important;
+}
+
+.theme-mlb .hit-total-cell .score-val{
+
+    color:#7dff93;
+
+    text-shadow:
+        0 0 12px #7dff93;
+}
+
+/* ===========================================
+   Batting Order Background
+=========================================== */
+
+.theme-mlb .batting-bg{
+
+    content:
+        url("../assets/mlb_batter_board.png");
+}
+
+/* ==========================
+   MLB Board Layout
+========================== */
+
+.theme-mlb .batting-board-container{
+
+    padding-top:0px;
+    padding-left:0;
+    padding-right:0;
+    padding-bottom:0;
+}
+
+/* =================================================
+   MLB JURASSIC SCOREBOARD
+================================================= */
+
+/* 整體外框 */
+.theme-mlb .scoreboard{
+    border:2px solid #9f8452;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.45);
+}
+
+/* 投手列 */
+.theme-mlb .pitcher-row-overlay{
+    background:
+        linear-gradient(
+            180deg,
+            #635847,
+            #3d362d
+        );
+    border-bottom:
+        2px solid #b89a63;
+}
+
+/* 中央標題 */
+.theme-mlb .title-row{
+    background:
+        linear-gradient(
+            180deg,
+            #5d5448,
+            #3c352d
+        );
+    color:#f6e2a6;
+    border-bottom:
+        2px solid #8f7650;
+    text-shadow:
+        2px 2px 4px rgba(0,0,0,.45);
+}
+
+/* 客隊 */
+.theme-mlb .team-away{
+    background:
+        linear-gradient(
+            180deg,
+            #607260,
+            #455347
+        );
+}
+
+/* 主隊 */
+.theme-mlb .team-home{
+    background:
+        linear-gradient(
+            180deg,
+            #75684f,
+            #554937
+        );
+}
+
+/* 壘包區 */
+.theme-mlb .inning-bases-area{
+    background:
+        linear-gradient(
+            180deg,
+            #4f4b43,
+            #322f29
+        );
+    border-left:
+        2px solid #b89a63;
+}
+
+/* BSO */
+.theme-mlb .count-row{
+    background:
+        linear-gradient(
+            180deg,
+            #5d5448,
+            #3b352e
+        );
+}
+
+/* 打者列 */
+.theme-mlb .player-row{
+    background:
+        linear-gradient(
+            180deg,
+            #d8cba7,
+            #b9a276
+        );
+    color:#2b241c;
+}
+
+/* 球隊名稱 */
+.theme-mlb .team-name{
+    color:#f3ecd6;
+    text-shadow:
+        1px 1px 3px rgba(0,0,0,.45);
+}
+
+/* 分數 */
+.theme-mlb .team-score{
+    color:#ffd44d;
+    text-shadow:
+        0 0 8px rgba(255,220,90,.35);
+}
+
+/* 投手姓名 */
+.theme-mlb .pitcher-name-overlay{
+    color:#f4ead1;
+}
+
+/* 打者姓名 */
+.theme-mlb .player-name{
+    color:#3a2f22;
+}
+
+/* 打者背號 */
+.theme-mlb .player-number{
+    color:#8b5f22;
+}
+
+/* 球速 */
+
+.theme-mlb .speed-overlay{
+    background:
+        rgba(0,0,0,.35);
+
+    border:
+        1px solid #caa96d;
+}
+
+.theme-mlb .radar-speed{
+    color:#ffd44d;
+}
+
+.theme-mlb .pitch-count-num-overlay{
+    color:#ffd44d;
+}
+
+.theme-mlb .base-diamond{
+    background:#d5c39d;
+}
+
+.theme-mlb .base-diamond.active{
+    background:#8dd44d;
+    box-shadow:
+        0 0 10px #8dd44d;
 }
