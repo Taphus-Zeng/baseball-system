@@ -56,6 +56,21 @@
             rgba(25,25,25,0.88)
         );
 }
+
+/* =================================================
+   MLB JURASSIC LINEUP
+================================================= */
+
+.theme-mlb .lineup-player-name{
+    color:#fff8df;
+    font-weight:700;
+    letter-spacing:.5px;
+    text-shadow:
+        0 2px 3px rgba(0,0,0,.9),
+        0 0 8px rgba(255,248,223,.35);
+}
+
+
 /* =================================================
    BATTING ORDER — JURASSIC STONE THEME
 ================================================= */
@@ -185,7 +200,7 @@
 }
 
 /* =================================================
-   FINAL SCORE — JURASSIC CYBER THEME
+   FINAL SCORE — JURASSIC THEME
 ================================================= */
 
 .theme-mlb .final-header{
@@ -515,7 +530,7 @@
 }
 
 /* 打者姓名 */
-.theme-mlb .player-name{
+.theme-mlb .overlay-player-name{
     color:#3a2f22;
 }
 
