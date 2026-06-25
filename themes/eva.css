@@ -148,3 +148,9 @@
         background-position-y: 12px;
     }
 }
+
+.theme-eva .batting-bg{
+
+    content:
+        url("../assets/eva_board.png");
+}
