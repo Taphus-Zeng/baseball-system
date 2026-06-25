@@ -242,5 +242,211 @@
 
     from{ left:-120%; }
 
-    to{ left:150%; }
+    to{ left:150%; }    
+}
+
+/* =================================================
+   FINAL SCORE — NPB CYBER THEME
+================================================= */
+
+.theme-npb .final-header{
+
+    background:
+        linear-gradient(
+            180deg,
+            #616975 0%,
+            #353c47 45%,
+            #161b23 100%
+        );
+
+    border:
+        2px solid #d7e1ec;
+
+    color:#eef6ff;
+
+    text-shadow:
+        0 0 10px #7acfff,
+        0 0 18px rgba(120,190,255,.45);
+
+    box-shadow:
+        inset 0 0 18px rgba(255,255,255,.06),
+        0 0 16px rgba(120,180,255,.25);
+}
+
+.theme-npb .final-header::before{
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.22),
+            transparent
+        );
+
+    animation:
+        npbHeaderSweep 5s linear infinite;
+}
+
+/* 表格主體 */
+
+.theme-npb .score-grid{
+
+    filter:
+        drop-shadow(
+            0 0 18px rgba(120,180,255,.25)
+        );
+}
+
+/* 局數標題 */
+
+.theme-npb .inning-header-cell,
+.theme-npb .inning-header-fill{
+
+    background:
+        linear-gradient(
+            180deg,
+            #434b56,
+            #222831
+        ) !important;
+
+    color:#dfe8f2;
+
+    border:
+        1px solid rgba(
+            180,
+            210,
+            255,
+            .18
+        );
+}
+
+/* 每局分數格 */
+
+.theme-npb .inning-cell{
+
+    position:relative;
+
+    background:
+        linear-gradient(
+            180deg,
+            #0f141b,
+            #04070b
+        ) !important;
+
+    border:
+        1px solid rgba(
+            160,
+            190,
+            255,
+            .08
+        );
+
+    overflow:hidden;
+}
+
+.theme-npb .inning-cell::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:0;
+    left:-120%;
+
+    width:40%;
+    height:100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(120,190,255,.12),
+            transparent
+        );
+
+    transform:
+        skewX(-25deg);
+
+    animation:
+        npbSweep 6s linear infinite;
+}
+
+/* 客隊 */
+
+.theme-npb .away-color{
+
+    background:
+        linear-gradient(
+            180deg,
+            #2f6fe8,
+            #123eb5
+        ) !important;
+
+    border-left:
+        5px solid #9edcff;
+}
+
+/* 主隊 */
+
+.theme-npb .home-color{
+
+    background:
+        linear-gradient(
+            180deg,
+            #8b4fff,
+            #4d1cb4
+        ) !important;
+
+    border-left:
+        5px solid #efc1ff;
+}
+
+/* R欄 */
+
+.theme-npb .final-total-cell{
+
+    background:
+        linear-gradient(
+            180deg,
+            #212c48,
+            #101a32
+        ) !important;
+}
+
+.theme-npb .final-total-cell .score-val{
+
+    color:#ffe36b;
+
+    text-shadow:
+        0 0 12px #ffe36b;
+}
+
+/* H欄 */
+
+.theme-npb .hit-total-cell{
+
+    background:
+        linear-gradient(
+            180deg,
+            #203828,
+            #102018
+        ) !important;
+}
+
+.theme-npb .hit-total-cell .score-val{
+
+    color:#7dff93;
+
+    text-shadow:
+        0 0 12px #7dff93;
+}
+
+/* ===========================================
+   Batting Order Background
+=========================================== */
+
+.theme-npb .batting-bg{
+
+    content:
+        url("../assets/npb_batter_board.png");
 }
