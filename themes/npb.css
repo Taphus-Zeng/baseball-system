@@ -134,12 +134,9 @@
                 0 0 8px #38b6ff;
         }
 
-.theme-npb .player-name{
-
+.theme-npb .batting-player-name{
     color:#edf5ff;
-
     text-shadow:
-
         0 0 8px rgba(120,200,255,.25);
 }
 
@@ -381,7 +378,6 @@
             #2f6fe8,
             #123eb5
         ) !important;
-
     border-left:
         5px solid #9edcff;
 }
@@ -389,14 +385,12 @@
 /* 主隊 */
 
 .theme-npb .home-color{
-
     background:
         linear-gradient(
             180deg,
             #8b4fff,
             #4d1cb4
         ) !important;
-
     border-left:
         5px solid #efc1ff;
 }
@@ -404,7 +398,6 @@
 /* R欄 */
 
 .theme-npb .final-total-cell{
-
     background:
         linear-gradient(
             180deg,
@@ -414,9 +407,7 @@
 }
 
 .theme-npb .final-total-cell .score-val{
-
     color:#ffe36b;
-
     text-shadow:
         0 0 12px #ffe36b;
 }
@@ -424,7 +415,6 @@
 /* H欄 */
 
 .theme-npb .hit-total-cell{
-
     background:
         linear-gradient(
             180deg,
@@ -436,7 +426,6 @@
 .theme-npb .hit-total-cell .score-val{
 
     color:#7dff93;
-
     text-shadow:
         0 0 12px #7dff93;
 }
